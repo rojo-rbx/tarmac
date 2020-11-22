@@ -68,6 +68,8 @@ pub struct SyncOptions {
     ///   unsynced assets.
     ///
     /// - debug: Copy to local debug directory for debugging output
+    ///
+    /// - local: Copy to locally installed Roblox content folder.
     #[structopt(long)]
     pub target: SyncTarget,
 
@@ -89,6 +91,7 @@ pub enum SyncTarget {
     Roblox,
     None,
     Debug,
+    Local,
 }
 
 impl FromStr for SyncTarget {
@@ -99,9 +102,10 @@ impl FromStr for SyncTarget {
             "roblox" => Ok(SyncTarget::Roblox),
             "none" => Ok(SyncTarget::None),
             "debug" => Ok(SyncTarget::Debug),
+            "local" => Ok(SyncTarget::Local),
 
             _ => Err(String::from(
-                "Invalid sync target. Valid options are roblox, none, and debug.",
+                "Invalid sync target. Valid options are roblox, local, none, and debug.",
             )),
         }
     }

@@ -16,14 +16,14 @@ use crate::{
     asset_name::AssetName,
     auth_cookie::get_auth_cookie,
     codegen::perform_codegen,
-    data::{Config, ConfigError, ImageSlice, InputManifest, Manifest, ManifestError, SyncInput},
+    data::{AssetId, Config, ConfigError, ImageSlice, InputManifest, Manifest, ManifestError, SyncInput},
     dpi_scale,
     image::Image,
     options::{GlobalOptions, SyncOptions, SyncTarget},
     roblox_web_api::{RobloxApiClient, RobloxApiError},
     sync_backend::{
-        DebugSyncBackend, Error as SyncBackendError, NoneSyncBackend, RetryBackend,
-        RobloxSyncBackend, SyncBackend, UploadInfo,
+        DebugSyncBackend, Error as SyncBackendError, LocalSyncBackend, NoneSyncBackend,
+        RetryBackend, RobloxSyncBackend, SyncBackend, UploadInfo,
     },
 };
 
@@ -47,6 +47,7 @@ pub fn sync(global: GlobalOptions, options: SyncOptions) -> Result<(), SyncError
 
     let mut session = SyncSession::new(&fuzzy_config_path)?;
 
+    let project_name = session.root_config().name.to_string();
     session.discover_configs()?;
     session.discover_inputs()?;
 
@@ -57,6 +58,13 @@ pub fn sync(global: GlobalOptions, options: SyncOptions) -> Result<(), SyncError
                 &mut session,
                 &options,
                 RobloxSyncBackend::new(&mut api_client, group_id),
+            );
+        }
+        SyncTarget::Local => {
+            sync_session(
+                &mut session,
+                &options,
+                LocalSyncBackend::new(Some(project_name))?,
             );
         }
         SyncTarget::None => {
@@ -257,7 +265,9 @@ impl SyncSession {
                     // If this input was known during the last sync operation,
                     // pull the information we knew about it out.
                     let (id, slice) = match self.original_manifest.inputs.get(&name) {
-                        Some(original) => (original.id, original.slice),
+                        Some(original) => {
+                            (original.id.map(AssetId::Id), original.slice)
+                        }
                         None => (None, None),
                     };
 
@@ -459,7 +469,7 @@ impl SyncSession {
         for (asset_name, slice) in &packed_image.slices {
             let input = self.inputs.get_mut(asset_name).unwrap();
 
-            input.id = Some(id);
+            input.id = Some(id.clone());
             input.slice = Some(*slice);
         }
 
@@ -538,11 +548,17 @@ impl SyncSession {
             .inputs
             .iter()
             .map(|(name, input)| {
+                let id = input.id.as_ref().and_then(|asset_id| {
+                    match asset_id {
+                        AssetId::Id(id) => Some(*id),
+                        _ => None,
+                    }
+                });
                 (
                     name.clone(),
                     InputManifest {
                         hash: input.hash.clone(),
-                        id: input.id,
+                        id,
                         slice: input.slice,
                         packable: input.config.packable,
                     },
@@ -603,10 +619,10 @@ impl SyncSession {
 
         let mut file = BufWriter::new(fs_err::File::create(list_path)?);
 
-        let known_ids: BTreeSet<u64> = self.inputs.values().filter_map(|input| input.id).collect();
+        let known_ids: BTreeSet<&AssetId> = self.inputs.values().filter_map(|input| input.id.as_ref()).collect();
 
         for id in known_ids {
-            writeln!(file, "rbxassetid://{}", id)?;
+            writeln!(file, "{}", id.to_string())?;
         }
 
         file.flush()?;
@@ -623,7 +639,14 @@ impl SyncSession {
 
         fs_err::create_dir_all(&cache_path)?;
 
-        let known_ids: HashSet<u64> = self.inputs.values().filter_map(|input| input.id).collect();
+        let known_ids: HashSet<u64> = self.inputs.values()
+            .filter_map(|input| input.id.as_ref().and_then(|asset_id| {
+                match asset_id {
+                    AssetId::Id(id) => Some(*id),
+                    _ => None,
+                }
+            }))
+            .collect();
 
         // Clean up cache items that aren't present in our current project.
         for entry in fs_err::read_dir(&cache_path)? {
@@ -659,7 +682,7 @@ impl SyncSession {
         }
 
         for input in self.inputs.values() {
-            if let Some(id) = input.id {
+            if let Some(id) = &input.id {
                 let input_path = cache_path.join(format!("{}", id));
 
                 match fs_err::metadata(&input_path) {
@@ -674,10 +697,15 @@ impl SyncSession {
                     }
                 }
 
-                log::debug!("Downloading asset ID {}", id);
+                match id {
+                    AssetId::Id(id) => {
+                        log::debug!("Downloading asset ID {}", id);
 
-                let contents = api_client.download_image(id)?;
-                fs_err::write(input_path, contents)?;
+                        let contents = api_client.download_image(*id)?;
+                        fs_err::write(input_path, contents)?;
+                    }
+                    _ => {}
+                }
             }
         }
 
