@@ -108,7 +108,7 @@ impl RobloxApiClient {
                     ..data
                 };
 
-                return self.upload_image(new_data);
+                self.upload_image(new_data)
             } else {
                 Err(RobloxApiError::ApiError { message })
             }

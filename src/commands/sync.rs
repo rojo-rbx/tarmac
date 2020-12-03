@@ -460,7 +460,7 @@ impl SyncSession {
         let upload_data = UploadInfo {
             name: "spritesheet".to_owned(),
             contents: encoded_image,
-            hash: hash.clone(),
+            hash,
         };
 
         let id = backend.upload(upload_data)?.id;
@@ -701,14 +701,11 @@ impl SyncSession {
                     }
                 }
 
-                match id {
-                    AssetId::Id(id) => {
-                        log::debug!("Downloading asset ID {}", id);
+                if let AssetId::Id(id) = id {
+                    log::debug!("Downloading asset ID {}", id);
 
-                        let contents = api_client.download_image(*id)?;
-                        fs_err::write(input_path, contents)?;
-                    }
-                    _ => {}
+                    let contents = api_client.download_image(*id)?;
+                    fs_err::write(input_path, contents)?;
                 }
             }
         }

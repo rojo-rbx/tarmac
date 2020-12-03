@@ -16,7 +16,7 @@ pub fn create_cache_map(
     let mut api_client = RobloxApiClient::new(global.auth);
 
     let project_path = match options.project_path {
-        Some(path) => path.clone(),
+        Some(path) => path,
         None => env::current_dir()?,
     };
 
