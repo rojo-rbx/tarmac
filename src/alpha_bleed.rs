@@ -27,18 +27,16 @@ pub(crate) fn alpha_bleed(image: &mut Image) {
 
     // An iterator of in-bounds positions adjacent to the given one.
     let adjacent_positions = |x, y| {
-        DIRECTIONS
-            .into_iter()
-            .filter_map(move |(x_offset, y_offset)| {
-                let x_source = (x as i32) + x_offset;
-                let y_source = (y as i32) + y_offset;
+        DIRECTIONS.iter().filter_map(move |(x_offset, y_offset)| {
+            let x_source = (x as i32) + x_offset;
+            let y_source = (y as i32) + y_offset;
 
-                if x_source < 0 || y_source < 0 || x_source >= w as i32 || y_source >= h as i32 {
-                    return None;
-                }
+            if x_source < 0 || y_source < 0 || x_source >= w as i32 || y_source >= h as i32 {
+                return None;
+            }
 
-                Some((x_source as u32, y_source as u32))
-            })
+            Some((x_source as u32, y_source as u32))
+        })
     };
 
     // Populate the set of initial positions to visit as well as positions that

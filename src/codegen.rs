@@ -12,7 +12,7 @@ use fs_err::File;
 
 use crate::{
     data::ImageSlice,
-    data::SyncInput,
+    data::{AssetId, SyncInput},
     lua_ast::{Block, Expression, Function, IfBlock, Statement, Table},
 };
 
@@ -143,7 +143,7 @@ fn codegen_grouped(output_path: &Path, inputs: &[&SyncInput]) -> io::Result<()> 
 
                     let input = inputs_by_dpi_scale.values().next().unwrap();
 
-                    match (input.id, input.slice) {
+                    match (&input.id, input.slice) {
                         (Some(id), Some(slice)) => Some(codegen_url_and_slice(id, slice)),
                         (Some(id), None) => Some(codegen_just_asset_url(id)),
                         _ => None,
@@ -175,7 +175,7 @@ fn codegen_grouped(output_path: &Path, inputs: &[&SyncInput]) -> io::Result<()> 
 /// defined, and so generate individual files.
 fn codegen_individual(inputs: &[&SyncInput]) -> io::Result<()> {
     for input in inputs {
-        let expression = match (input.id, input.slice) {
+        let expression = match (&input.id, input.slice) {
             (Some(id), Some(slice)) => codegen_url_and_slice(id, slice),
             (Some(id), None) => codegen_just_asset_url(id),
             _ => continue,
@@ -193,12 +193,12 @@ fn codegen_individual(inputs: &[&SyncInput]) -> io::Result<()> {
     Ok(())
 }
 
-fn codegen_url_and_slice(id: u64, slice: ImageSlice) -> Expression {
+fn codegen_url_and_slice(id: &AssetId, slice: ImageSlice) -> Expression {
     let offset = slice.min();
     let size = slice.size();
 
     let mut table = Table::new();
-    table.add_entry("Image", format!("rbxassetid://{}", id));
+    table.add_entry("Image", id.to_string());
     table.add_entry(
         "ImageRectOffset",
         Expression::Raw(format!("Vector2.new({}, {})", offset.0, offset.1)),
@@ -212,8 +212,8 @@ fn codegen_url_and_slice(id: u64, slice: ImageSlice) -> Expression {
     Expression::Table(table)
 }
 
-fn codegen_just_asset_url(id: u64) -> Expression {
-    Expression::String(format!("rbxassetid://{}", id))
+fn codegen_just_asset_url(id: &AssetId) -> Expression {
+    Expression::String(id.to_string())
 }
 
 fn codegen_dpi_option(input: &SyncInput) -> (Expression, Block) {
@@ -221,7 +221,7 @@ fn codegen_dpi_option(input: &SyncInput) -> (Expression, Block) {
 
     // FIXME: We should probably pull data out of SyncInput at the start of
     // codegen so that we can handle invariants like this.
-    let id = input.id.unwrap();
+    let id = input.id.as_ref().unwrap();
 
     let value = match input.slice {
         Some(slice) => codegen_url_and_slice(id, slice),

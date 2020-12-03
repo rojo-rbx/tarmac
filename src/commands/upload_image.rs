@@ -11,7 +11,6 @@ use crate::{
 pub fn upload_image(global: GlobalOptions, options: UploadImageOptions) {
     let auth = global
         .auth
-        .clone()
         .or_else(get_auth_cookie)
         .expect("no auth cookie found");
 

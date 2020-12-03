@@ -1,9 +1,17 @@
-use std::{borrow::Cow, io, path::Path, thread, time::Duration};
+use std::{
+    borrow::Cow,
+    io,
+    path::{Path, PathBuf},
+    thread,
+    time::Duration,
+};
 
 use fs_err as fs;
 use reqwest::StatusCode;
+use roblox_install::RobloxStudio;
 use thiserror::Error;
 
+use crate::data::AssetId;
 use crate::roblox_web_api::{ImageUploadData, RobloxApiClient, RobloxApiError};
 
 pub trait SyncBackend {
@@ -12,7 +20,7 @@ pub trait SyncBackend {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UploadResponse {
-    pub id: u64,
+    pub id: AssetId,
 }
 
 #[derive(Clone, Debug)]
@@ -58,7 +66,7 @@ impl<'a> SyncBackend for RobloxSyncBackend<'a> {
                 );
 
                 Ok(UploadResponse {
-                    id: response.backing_asset_id,
+                    id: AssetId::Id(response.backing_asset_id),
                 })
             }
 
@@ -69,6 +77,54 @@ impl<'a> SyncBackend for RobloxSyncBackend<'a> {
 
             Err(err) => Err(err.into()),
         }
+    }
+}
+
+pub struct LocalSyncBackend {
+    content_path: PathBuf,
+    scope: Option<String>,
+}
+
+impl LocalSyncBackend {
+    pub fn new(scope: Option<String>) -> Result<LocalSyncBackend, Error> {
+        RobloxStudio::locate()
+            .map(|studio| LocalSyncBackend {
+                content_path: studio.content_path().into(),
+                scope,
+            })
+            .map_err(|error| error.into())
+    }
+
+    fn get_asset_path(&self, data: &UploadInfo) -> PathBuf {
+        let mut path = PathBuf::from(".tarmac");
+        if let Some(scope) = &self.scope {
+            path.push(scope);
+        }
+        path.push(self.get_asset_file_name(data));
+        path
+    }
+
+    fn get_asset_file_name(&self, data: &UploadInfo) -> String {
+        format!("{}.png", data.name)
+    }
+}
+
+impl SyncBackend for LocalSyncBackend {
+    fn upload(&mut self, data: UploadInfo) -> Result<UploadResponse, Error> {
+        let asset_path = self.get_asset_path(&data);
+        let file_path = self.content_path.join(&asset_path);
+        let parent = file_path
+            .parent()
+            .expect("content folder should have a parent");
+
+        fs::create_dir_all(parent)?;
+        fs::write(&file_path, &data.contents)?;
+
+        log::info!("Written {} to path {}", &data.name, file_path.display());
+
+        Ok(UploadResponse {
+            id: AssetId::Path(asset_path),
+        })
     }
 }
 
@@ -103,7 +159,9 @@ impl SyncBackend for DebugSyncBackend {
         let file_path = path.join(id.to_string());
         fs::write(&file_path, &data.contents)?;
 
-        Ok(UploadResponse { id })
+        Ok(UploadResponse {
+            id: AssetId::Id(id),
+        })
     }
 }
 
@@ -159,6 +217,12 @@ pub enum Error {
 
     #[error("Tarmac was rate-limited trying to upload assets. Try again in a little bit.")]
     RateLimited,
+
+    #[error(transparent)]
+    StudioInstall {
+        #[from]
+        source: roblox_install::Error,
+    },
 
     #[error(transparent)]
     Io {
@@ -249,7 +313,9 @@ mod test {
         #[test]
         fn upload_returns_first_success_result() {
             let mut counter = 0;
-            let success = UploadResponse { id: 10 };
+            let success = UploadResponse {
+                id: AssetId::Id(10),
+            };
             let inner = CountUploads::new(&mut counter).with_results(vec![
                 Err(Error::RateLimited),
                 Err(Error::RateLimited),

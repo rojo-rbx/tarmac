@@ -1,9 +1,34 @@
-use std::path::PathBuf;
+use std::{fmt, path::PathBuf};
 
 use crate::{
     asset_name::AssetName,
     data::{ImageSlice, InputConfig, InputManifest},
 };
+
+use path_slash::PathBufExt;
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum AssetId {
+    Id(u64),
+    Path(PathBuf),
+}
+
+impl fmt::Display for AssetId {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            formatter,
+            "{}",
+            match &self {
+                Self::Id(id) => format!("rbxassetid://{}", id),
+                Self::Path(path) => format!(
+                    "rbxasset://{}",
+                    path.to_slash()
+                        .expect("error while converting path to slash")
+                ),
+            }
+        )
+    }
+}
 
 /// In-memory representation of a Tarmac Input during the sync process.
 ///
@@ -35,7 +60,7 @@ pub struct SyncInput {
 
     /// If this input has been part of an upload to Roblox.com, contains the
     /// asset ID that contains the data from this input.
-    pub id: Option<u64>,
+    pub id: Option<AssetId>,
 
     /// If this input has been packed into a spritesheet, contains the slice of
     /// the spritesheet that this input is located in.
