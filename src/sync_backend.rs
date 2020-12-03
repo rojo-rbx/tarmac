@@ -1,9 +1,15 @@
-use std::{borrow::Cow, io, path::{Path, PathBuf}, thread, time::Duration};
+use std::{
+    borrow::Cow,
+    io,
+    path::{Path, PathBuf},
+    thread,
+    time::Duration,
+};
 
 use fs_err as fs;
 use reqwest::StatusCode;
-use thiserror::Error;
 use roblox_install::RobloxStudio;
+use thiserror::Error;
 
 use crate::data::AssetId;
 use crate::roblox_web_api::{ImageUploadData, RobloxApiClient, RobloxApiError};
@@ -82,12 +88,9 @@ pub struct LocalSyncBackend {
 impl LocalSyncBackend {
     pub fn new(scope: Option<String>) -> Result<LocalSyncBackend, Error> {
         RobloxStudio::locate()
-            .map(|studio| {
-
-                LocalSyncBackend {
-                    content_path: studio.content_path().into(),
-                    scope,
-                }
+            .map(|studio| LocalSyncBackend {
+                content_path: studio.content_path().into(),
+                scope,
             })
             .map_err(|error| error.into())
     }
@@ -110,16 +113,14 @@ impl SyncBackend for LocalSyncBackend {
     fn upload(&mut self, data: UploadInfo) -> Result<UploadResponse, Error> {
         let asset_path = self.get_asset_path(&data);
         let file_path = self.content_path.join(&asset_path);
-        let parent = file_path.parent().expect("content folder should have a parent");
+        let parent = file_path
+            .parent()
+            .expect("content folder should have a parent");
 
         fs::create_dir_all(parent)?;
         fs::write(&file_path, &data.contents)?;
 
-        log::info!(
-            "Written {} to path {}",
-            &data.name,
-            file_path.display()
-        );
+        log::info!("Written {} to path {}", &data.name, file_path.display());
 
         Ok(UploadResponse {
             id: AssetId::Path(asset_path),
@@ -158,7 +159,9 @@ impl SyncBackend for DebugSyncBackend {
         let file_path = path.join(id.to_string());
         fs::write(&file_path, &data.contents)?;
 
-        Ok(UploadResponse { id: AssetId::Id(id) })
+        Ok(UploadResponse {
+            id: AssetId::Id(id),
+        })
     }
 }
 
@@ -310,7 +313,9 @@ mod test {
         #[test]
         fn upload_returns_first_success_result() {
             let mut counter = 0;
-            let success = UploadResponse { id: AssetId::Id(10) };
+            let success = UploadResponse {
+                id: AssetId::Id(10),
+            };
             let inner = CountUploads::new(&mut counter).with_results(vec![
                 Err(Error::RateLimited),
                 Err(Error::RateLimited),

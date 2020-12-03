@@ -16,7 +16,9 @@ use crate::{
     asset_name::AssetName,
     auth_cookie::get_auth_cookie,
     codegen::perform_codegen,
-    data::{AssetId, Config, ConfigError, ImageSlice, InputManifest, Manifest, ManifestError, SyncInput},
+    data::{
+        AssetId, Config, ConfigError, ImageSlice, InputManifest, Manifest, ManifestError, SyncInput,
+    },
     dpi_scale,
     image::Image,
     options::{GlobalOptions, SyncOptions, SyncTarget},
@@ -265,9 +267,7 @@ impl SyncSession {
                     // If this input was known during the last sync operation,
                     // pull the information we knew about it out.
                     let (id, slice) = match self.original_manifest.inputs.get(&name) {
-                        Some(original) => {
-                            (original.id.map(AssetId::Id), original.slice)
-                        }
+                        Some(original) => (original.id.map(AssetId::Id), original.slice),
                         None => (None, None),
                     };
 
@@ -548,11 +548,9 @@ impl SyncSession {
             .inputs
             .iter()
             .map(|(name, input)| {
-                let id = input.id.as_ref().and_then(|asset_id| {
-                    match asset_id {
-                        AssetId::Id(id) => Some(*id),
-                        _ => None,
-                    }
+                let id = input.id.as_ref().and_then(|asset_id| match asset_id {
+                    AssetId::Id(id) => Some(*id),
+                    _ => None,
                 });
                 (
                     name.clone(),
@@ -619,7 +617,11 @@ impl SyncSession {
 
         let mut file = BufWriter::new(fs_err::File::create(list_path)?);
 
-        let known_ids: BTreeSet<&AssetId> = self.inputs.values().filter_map(|input| input.id.as_ref()).collect();
+        let known_ids: BTreeSet<&AssetId> = self
+            .inputs
+            .values()
+            .filter_map(|input| input.id.as_ref())
+            .collect();
 
         for id in known_ids {
             writeln!(file, "{}", id.to_string())?;
@@ -639,13 +641,15 @@ impl SyncSession {
 
         fs_err::create_dir_all(&cache_path)?;
 
-        let known_ids: HashSet<u64> = self.inputs.values()
-            .filter_map(|input| input.id.as_ref().and_then(|asset_id| {
-                match asset_id {
+        let known_ids: HashSet<u64> = self
+            .inputs
+            .values()
+            .filter_map(|input| {
+                input.id.as_ref().and_then(|asset_id| match asset_id {
                     AssetId::Id(id) => Some(*id),
                     _ => None,
-                }
-            }))
+                })
+            })
             .collect();
 
         // Clean up cache items that aren't present in our current project.

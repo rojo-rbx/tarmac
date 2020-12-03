@@ -13,18 +13,20 @@ pub enum AssetId {
     Path(PathBuf),
 }
 
-impl AssetId {
-    pub fn to_string(&self) -> String {
-        match &self {
-            Self::Id(id) => format!("rbxassetid://{}", id),
-            Self::Path(path) => format!("rbxasset://{}", path.to_slash().expect("error while converting path to slash")),
-        }
-    }
-}
-
 impl fmt::Display for AssetId {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        write!(formatter, "{}", self.to_string())
+        write!(
+            formatter,
+            "{}",
+            match &self {
+                Self::Id(id) => format!("rbxassetid://{}", id),
+                Self::Path(path) => format!(
+                    "rbxasset://{}",
+                    path.to_slash()
+                        .expect("error while converting path to slash")
+                ),
+            }
+        )
     }
 }
 
