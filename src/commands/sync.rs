@@ -7,6 +7,7 @@ use std::{
 };
 
 use fs_err as fs;
+use image::{codecs::png::PngEncoder, imageops, DynamicImage, GenericImageView, ImageError};
 use packos::{InputItem, SimplePacker};
 use thiserror::Error;
 use walkdir::WalkDir;
@@ -20,7 +21,6 @@ use crate::{
         AssetId, Config, ConfigError, ImageSlice, InputManifest, Manifest, ManifestError, SyncInput,
     },
     dpi_scale,
-    image::Image,
     options::{GlobalOptions, SyncOptions, SyncTarget},
     roblox_web_api::{RobloxApiClient, RobloxApiError},
     sync_backend::{
@@ -121,7 +121,7 @@ struct InputKind {
 }
 
 struct PackedImage {
-    image: Image,
+    img: DynamicImage,
     slices: HashMap<AssetName, ImageSlice>,
 }
 
@@ -372,7 +372,7 @@ impl SyncSession {
         for (i, packed_image) in packed_images.iter_mut().enumerate() {
             log::trace!("Bleeding image {}", i);
 
-            alpha_bleed(&mut packed_image.image);
+            alpha_bleed(&mut packed_image.img);
         }
 
         log::trace!("Syncing packed images...");
@@ -413,11 +413,11 @@ impl SyncSession {
 
         for name in group {
             let input = &self.inputs[&name];
-            let image = Image::decode_png(input.contents.as_slice())?;
+            let img = image::load_from_memory(input.contents.as_slice())?;
 
-            let input = InputItem::new(image.size());
+            let input = InputItem::new(img.dimensions());
 
-            images_by_id.insert(input.id(), (name, image));
+            images_by_id.insert(input.id(), (name, img));
             packos_inputs.push(input);
         }
 
@@ -429,19 +429,21 @@ impl SyncSession {
         let mut packed_images = Vec::new();
 
         for bucket in pack_results.buckets() {
-            let mut image = Image::new_empty_rgba8(bucket.size());
+            let (width, height) = bucket.size();
+            let mut img = DynamicImage::new_rgba8(width, height);
             let mut slices: HashMap<AssetName, _> = HashMap::new();
 
             for item in bucket.items() {
                 let (name, sprite_image) = &images_by_id[&item.id()];
+                let (x, y) = item.position();
 
-                image.blit(sprite_image, item.position());
+                imageops::overlay(&mut img, sprite_image, x, y);
 
                 let slice = ImageSlice::new(item.position(), item.max());
                 slices.insert((*name).clone(), slice);
             }
 
-            packed_images.push(PackedImage { image, slices });
+            packed_images.push(PackedImage { img, slices });
         }
 
         Ok(packed_images)
@@ -452,8 +454,18 @@ impl SyncSession {
         backend: &mut S,
         packed_image: &PackedImage,
     ) -> Result<(), SyncError> {
-        let mut encoded_image = Vec::new();
-        packed_image.image.encode_png(&mut encoded_image)?;
+        let mut encoded_image: Vec<u8> = Vec::new();
+
+        let (width, height) = packed_image.img.dimensions();
+
+        PngEncoder::new(&mut encoded_image)
+            .encode(
+                &packed_image.img.to_bytes(),
+                width,
+                height,
+                packed_image.img.color(),
+            )
+            .unwrap();
 
         let hash = generate_asset_hash(&encoded_image);
 
@@ -483,9 +495,20 @@ impl SyncSession {
     ) -> Result<(), SyncError> {
         let input = self.inputs.get_mut(input_name).unwrap();
 
+        let mut img = image::load_from_memory(input.contents.as_slice())?;
+
+        alpha_bleed(&mut img);
+
+        let (width, height) = img.dimensions();
+
+        let mut encoded_image: Vec<u8> = Vec::new();
+        PngEncoder::new(&mut encoded_image)
+            .encode(&img.to_bytes(), width, height, img.color())
+            .unwrap();
+
         let upload_data = UploadInfo {
             name: input.human_name(),
-            contents: input.contents.clone(),
+            contents: encoded_image.to_vec(),
             hash: input.hash.clone(),
         };
 
@@ -745,6 +768,12 @@ pub enum SyncError {
     Config {
         #[from]
         source: ConfigError,
+    },
+
+    #[error(transparent)]
+    Image {
+        #[from]
+        source: ImageError,
     },
 
     #[error(transparent)]
