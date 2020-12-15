@@ -27,7 +27,7 @@ The recommended way to install Tarmac is with [Foreman](https://github.com/rojo-
 Add an entry to the `[tools]` section of your `foreman.toml` file:
 
 ```toml
-foreman = { source = "Roblox/tarmac", version = "0.7.0" }
+foreman = { source = "jeparlefrancais/tarmac", version = "0.7.1" }
 ```
 
 ### Installing from GitHub Releases

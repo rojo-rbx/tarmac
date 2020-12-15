@@ -2,6 +2,10 @@
 
 ## Unreleased Changes
 
+## 0.7.1 (2020-12-14)
+* Added alpha-bleeding of unpacked images ([#2](https://github.com/jeparlefrancais/tarmac/pull/2))
+* Added option to sync files locally ([#1](https://github.com/jeparlefrancais/tarmac/pull/1))
+
 ## 0.7.0 (2020-07-23)
 * Added support for automatically retrying uploads when being rate limited. ([#42](https://github.com/Roblox/tarmac/issues/43))
 
