@@ -111,6 +111,9 @@ struct SyncSession {
 
     /// Errors encountered during syncing that we ignored at the time.
     sync_errors: Vec<anyhow::Error>,
+
+    /// The current sprite's index. Used for `local` to use different file names for each sprite that's used.
+    current_sprite_index: u32,
 }
 
 /// Contains information to help Tarmac batch process different kinds of assets.
@@ -122,6 +125,7 @@ struct InputKind {
 
 struct PackedImage {
     img: DynamicImage,
+    index: u32,
     slices: HashMap<AssetName, ImageSlice>,
 }
 
@@ -144,6 +148,7 @@ impl SyncSession {
             original_manifest,
             inputs: BTreeMap::new(),
             sync_errors: Vec::new(),
+            current_sprite_index: 1,
         })
     }
 
@@ -371,8 +376,6 @@ impl SyncSession {
 
         for (i, packed_image) in packed_images.iter_mut().enumerate() {
             log::trace!("Bleeding image {}", i);
-
-            alpha_bleed(&mut packed_image.img);
         }
 
         log::trace!("Syncing packed images...");
@@ -407,7 +410,7 @@ impl SyncSession {
         true
     }
 
-    fn pack_images(&self, group: &[AssetName]) -> Result<Vec<PackedImage>, SyncError> {
+    fn pack_images(&mut self, group: &[AssetName]) -> Result<Vec<PackedImage>, SyncError> {
         let mut packos_inputs = Vec::new();
         let mut images_by_id = HashMap::new();
 
@@ -443,7 +446,9 @@ impl SyncSession {
                 slices.insert((*name).clone(), slice);
             }
 
-            packed_images.push(PackedImage { img, slices });
+            
+            packed_images.push(PackedImage { img, slices, index: self.current_sprite_index });
+            self.current_sprite_index += 1;
         }
 
         Ok(packed_images)
@@ -470,7 +475,7 @@ impl SyncSession {
         let hash = generate_asset_hash(&encoded_image);
 
         let upload_data = UploadInfo {
-            name: "spritesheet".to_owned(),
+            name: format!("spritesheet-{}", packed_image.index).to_owned(),
             contents: encoded_image,
             hash,
         };
