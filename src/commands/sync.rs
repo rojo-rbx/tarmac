@@ -374,7 +374,7 @@ impl SyncSession {
 
         log::trace!("Alpha-bleeding {} packed images...", packed_images.len());
 
-        for (i, packed_image) in packed_images.iter_mut().enumerate() {
+        for (i, _packed_image) in packed_images.iter_mut().enumerate() {
             log::trace!("Bleeding image {}", i);
         }
 
@@ -446,8 +446,11 @@ impl SyncSession {
                 slices.insert((*name).clone(), slice);
             }
 
-            
-            packed_images.push(PackedImage { img, slices, index: self.current_sprite_index });
+            packed_images.push(PackedImage {
+                img,
+                slices,
+                index: self.current_sprite_index,
+            });
             self.current_sprite_index += 1;
         }
 
@@ -475,7 +478,7 @@ impl SyncSession {
         let hash = generate_asset_hash(&encoded_image);
 
         let upload_data = UploadInfo {
-            name: format!("spritesheet-{}", packed_image.index).to_owned(),
+            name: format!("spritesheet-{}", packed_image.index),
             contents: encoded_image,
             hash,
         };
