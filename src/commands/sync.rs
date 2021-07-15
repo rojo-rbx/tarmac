@@ -374,8 +374,10 @@ impl SyncSession {
 
         log::trace!("Alpha-bleeding {} packed images...", packed_images.len());
 
-        for (i, _packed_image) in packed_images.iter_mut().enumerate() {
+        for (i, packed_image) in packed_images.iter_mut().enumerate() {
             log::trace!("Bleeding image {}", i);
+
+            alpha_bleed(&mut packed_image.img);
         }
 
         log::trace!("Syncing packed images...");
