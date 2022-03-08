@@ -154,6 +154,10 @@ pub struct InputConfig {
     /// instances.
     #[serde(default)]
     pub packable: bool,
+
+    /// The group these sprites belong to
+    #[serde(default)]
+    pub group_id: Option<String>,
 }
 
 #[derive(Debug, Error)]

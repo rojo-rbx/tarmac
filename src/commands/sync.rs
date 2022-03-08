@@ -8,6 +8,7 @@ use std::{
 
 use fs_err as fs;
 use image::{codecs::png::PngEncoder, imageops, DynamicImage, GenericImageView, ImageError};
+use indexmap::IndexSet;
 use packos::{InputItem, SimplePacker};
 use thiserror::Error;
 use walkdir::WalkDir;
@@ -121,6 +122,7 @@ struct SyncSession {
 struct InputKind {
     packable: bool,
     dpi_scale: u32,
+    group_id: Option<usize>,
 }
 
 struct PackedImage {
@@ -305,6 +307,7 @@ impl SyncSession {
 
     fn sync_with_backend<S: SyncBackend>(&mut self, backend: &mut S) {
         let mut compatible_input_groups = BTreeMap::new();
+        let mut sprite_groups: IndexSet<String> = IndexSet::new();
 
         for (input_name, input) in &self.inputs {
             if !is_image_asset(&input.path) {
@@ -316,10 +319,28 @@ impl SyncSession {
                 continue;
             }
 
-            let kind = InputKind {
-                packable: input.config.packable,
-                dpi_scale: input.dpi_scale,
-            };
+            let kind: InputKind;
+
+            // If the user wants to force certain sprites into their own grouping, this does the job.
+            if let Some(sprite_group_id) = &input.config.group_id {
+                let (id, _) = sprite_groups.insert_full(sprite_group_id.to_string());
+
+                log::trace!("Using group {} ({})", sprite_group_id, id);
+
+                kind = InputKind {
+                    packable: input.config.packable,
+                    dpi_scale: input.dpi_scale,
+                    group_id: Some(id),
+                };
+            } else {
+                kind = InputKind {
+                    packable: input.config.packable,
+                    dpi_scale: input.dpi_scale,
+                    group_id: None,
+                };
+            }
+
+
 
             let input_group = compatible_input_groups.entry(kind).or_insert_with(Vec::new);
 
@@ -592,6 +613,7 @@ impl SyncSession {
                         id,
                         slice: input.slice,
                         packable: input.config.packable,
+                        group_id: input.config.group_id.clone(),
                     },
                 )
             })

@@ -64,6 +64,8 @@ pub struct InputManifest {
     /// Whether the config applied to this input asked for it to be packed into
     /// a spritesheet.
     pub packable: bool,
+
+    pub group_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

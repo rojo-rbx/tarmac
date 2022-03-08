@@ -156,7 +156,7 @@ impl SyncBackend for DebugSyncBackend {
         let path = Path::new(".tarmac-debug");
         fs::create_dir_all(path)?;
 
-        let file_path = path.join(id.to_string());
+        let file_path = path.join(format!("{}.png", id.to_string()));
         fs::write(&file_path, &data.contents)?;
 
         Ok(UploadResponse {
