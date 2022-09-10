@@ -5,7 +5,7 @@ use reqwest::{
     header::{self, HeaderValue},
     Client,
 };
-use secrecy::{SecretString, ExposeSecret};
+use secrecy::{ExposeSecret, SecretString};
 
 use crate::roblox_web_api::RobloxApiError;
 
