@@ -261,7 +261,7 @@ impl SyncSession {
                 for matching in filtered_paths {
                     let path = matching.into_path();
 
-                    let name = AssetName::from_paths(&root_config_path, &path);
+                    let name = AssetName::from_paths(root_config_path, &path);
                     log::trace!("Found input {}", name);
 
                     let path_info = dpi_scale::extract_path_info(&path);
@@ -417,7 +417,7 @@ impl SyncSession {
         let mut images_by_id = HashMap::new();
 
         for name in group {
-            let input = &self.inputs[&name];
+            let input = &self.inputs[name];
             let img = image::load_from_memory(input.contents.as_slice())?;
 
             let input = InputItem::new(img.dimensions());
@@ -522,7 +522,7 @@ impl SyncSession {
             hash: input.hash.clone(),
         };
 
-        let id = if let Some(input_manifest) = self.original_manifest.inputs.get(&input_name) {
+        let id = if let Some(input_manifest) = self.original_manifest.inputs.get(input_name) {
             // This input existed during our last sync operation. We'll compare
             // the current state with the previous one to see if we need to take
             // action.
@@ -615,9 +615,7 @@ impl SyncSession {
         for (input_name, input) in &self.inputs {
             let output_path = input
                 .config
-                .codegen_path
-                .as_ref()
-                .map(|path| path.as_path());
+                .codegen_path.as_deref();
 
             let compat = CodegenCompatibility { output_path };
 
@@ -657,7 +655,7 @@ impl SyncSession {
             .collect();
 
         for id in known_ids {
-            writeln!(file, "{}", id.to_string())?;
+            writeln!(file, "{}", id)?;
         }
 
         file.flush()?;

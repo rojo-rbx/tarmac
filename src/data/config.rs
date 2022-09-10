@@ -15,7 +15,7 @@ static CONFIG_FILENAME: &str = "tarmac.toml";
 ///
 /// Tarmac is started from a top-level tarmac.toml file. Config files can
 /// include other config files.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct Config {
     /// The name of the project, currently only used in debugging.
@@ -125,7 +125,7 @@ fn default_max_spritesheet_size() -> (u32, u32) {
     (1024, 1024)
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct InputConfig {
     /// A glob that will match all files that should be considered for this

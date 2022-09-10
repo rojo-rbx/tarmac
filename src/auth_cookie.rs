@@ -10,7 +10,7 @@ use secrecy::{SecretString, ExposeSecret};
 use crate::roblox_web_api::RobloxApiError;
 
 pub fn get_auth_cookie() -> Option<SecretString> {
-    rbx_cookie::get_value().map(|f| SecretString::new(f))
+    rbx_cookie::get_value().map(SecretString::new)
 }
 
 pub fn get_csrf_token(roblosecurity_cookie: &SecretString) -> Result<HeaderValue, RobloxApiError> {
