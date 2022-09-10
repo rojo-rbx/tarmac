@@ -1,5 +1,6 @@
 use std::{path::PathBuf, str::FromStr};
 
+use secrecy::SecretString;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -18,7 +19,7 @@ pub struct GlobalOptions {
     /// will attempt to use the cookie from the Roblox Studio installation on
     /// the system.
     #[structopt(long, global(true))]
-    pub auth: Option<String>,
+    pub auth: Option<SecretString>,
 
     /// Sets verbosity level. Can be specified multiple times.
     #[structopt(long = "verbose", short, global(true), parse(from_occurrences))]
