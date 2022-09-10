@@ -613,9 +613,7 @@ impl SyncSession {
         let mut compatible_codegen_groups = HashMap::new();
 
         for (input_name, input) in &self.inputs {
-            let output_path = input
-                .config
-                .codegen_path.as_deref();
+            let output_path = input.config.codegen_path.as_deref();
 
             let compat = CodegenCompatibility { output_path };
 
