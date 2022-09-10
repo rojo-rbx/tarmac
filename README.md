@@ -24,7 +24,7 @@ The recommended way to install Tarmac is with [Aftman](https://github.com/LPGhat
 Add an entry to the `[tools]` section of your `aftman.toml` file:
 
 ```toml
-tarmac = "vorlias/tarmac@0.7.2-beta.1"
+tarmac = "vorlias/tarmac@0.7.3"
 ```
 
 ### Installing with Foreman
@@ -32,7 +32,7 @@ tarmac = "vorlias/tarmac@0.7.2-beta.1"
 Add an entry to the `[tools]` section of your `foreman.toml` file:
 
 ```toml
-tarmac = { source = "vorlias/tarmac", version = "0.7.2-beta.1 }
+tarmac = { source = "vorlias/tarmac", version = "0.7.3" }
 ```
 
 
