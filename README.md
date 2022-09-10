@@ -3,11 +3,8 @@
 </div>
 
 <div align="center">
-    <a href="https://github.com/Roblox/tarmac/actions">
+    <a href="https://github.com/Vorlias/tarmac/actions">
         <img src="https://github.com/Vorlias/tarmac/workflows/CI/badge.svg" alt="GitHub Actions status" />
-    </a>
-    <a href="https://crates.io/crates/tarmac">
-        <img src="https://img.shields.io/crates/v/tarmac.svg?label=latest%20release" alt="Latest release" />
     </a>
 </div>
 
