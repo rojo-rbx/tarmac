@@ -7,7 +7,7 @@ use reqwest::{
     header::{HeaderValue, COOKIE},
     Client, Request, Response, StatusCode,
 };
-use secrecy::{SecretString, ExposeSecret};
+use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
