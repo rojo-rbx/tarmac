@@ -7,9 +7,11 @@ use reqwest::{
     header::{HeaderValue, COOKIE},
     Client, Request, Response, StatusCode,
 };
-use secrecy::{SecretString, ExposeSecret};
+use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+use crate::auth_cookie::get_csrf_token;
 
 #[derive(Debug, Clone)]
 pub struct ImageUploadData<'a> {
@@ -51,10 +53,27 @@ impl fmt::Debug for RobloxApiClient {
 
 impl RobloxApiClient {
     pub fn new(auth_token: Option<SecretString>) -> Self {
-        Self {
-            auth_token,
-            csrf_token: None,
-            client: Client::new(),
+        match auth_token {
+            Some(token) => {
+                let csrf_token = match get_csrf_token(&token) {
+                    Ok(value) => Some(value),
+                    Err(err) => {
+                        log::error!("Was unable to fetch CSRF token: {}", err.to_string());
+                        None
+                    }
+                };
+
+                Self {
+                    auth_token: Some(token),
+                    csrf_token,
+                    client: Client::new(),
+                }
+            }
+            _ => Self {
+                auth_token,
+                csrf_token: None,
+                client: Client::new(),
+            },
         }
     }
 
@@ -247,4 +266,7 @@ pub enum RobloxApiError {
 
     #[error("Roblox API returned HTTP {status} with body: {body}")]
     ResponseError { status: StatusCode, body: String },
+
+    #[error("Request for CSRF token did not return an X-CSRF-Token header.")]
+    MissingCsrfToken,
 }

@@ -1,14 +1,29 @@
 //! Implementation of automatically fetching authentication cookie from a Roblox
 //! Studio installation.
 
-use secrecy::SecretString;
+use reqwest::{
+    header::{self, HeaderValue},
+    Client,
+};
+use secrecy::{ExposeSecret, SecretString};
 
-#[cfg(windows)]
+use crate::roblox_web_api::RobloxApiError;
+
 pub fn get_auth_cookie() -> Option<SecretString> {
-    rbx_cookie::get().map(|f| SecretString::new(f))
+    rbx_cookie::get_value().map(SecretString::new)
 }
 
-#[cfg(not(windows))]
-pub fn get_auth_cookie() -> Option<String> {
-    rbx_cookie::get().map(|f| SecretString::new(f))
+pub fn get_csrf_token(roblosecurity_cookie: &SecretString) -> Result<HeaderValue, RobloxApiError> {
+    let response = Client::new()
+        .post("https://auth.roblox.com")
+        .header(header::COOKIE, roblosecurity_cookie.expose_secret())
+        .header(header::CONTENT_LENGTH, 0)
+        .send();
+
+    response
+        .unwrap()
+        .headers()
+        .get("X-CSRF-Token")
+        .map(|v| v.to_owned())
+        .ok_or(RobloxApiError::MissingCsrfToken)
 }

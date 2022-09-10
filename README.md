@@ -3,17 +3,14 @@
 </div>
 
 <div align="center">
-    <a href="https://github.com/Roblox/tarmac/actions">
-        <img src="https://github.com/Roblox/tarmac/workflows/CI/badge.svg" alt="GitHub Actions status" />
-    </a>
-    <a href="https://crates.io/crates/tarmac">
-        <img src="https://img.shields.io/crates/v/tarmac.svg?label=latest%20release" alt="Latest release" />
+    <a href="https://github.com/Vorlias/tarmac/actions">
+        <img src="https://github.com/Vorlias/tarmac/workflows/CI/badge.svg" alt="GitHub Actions status" />
     </a>
 </div>
 
 <hr />
 
-**Heads up! This repository was recently migrated from [the rojo-rbx org](https://github.com/rojo-rbx) to [the Roblox org](https://github.com/Roblox). Not much else has changed.**
+This is a more up-to-date fork of the [Tarmac repository](https://github.com/Roblox/Tarmac) by Roblox, since the original repository has effectively been *abandoned* (hasn't had updates since 2020).
 
 Tarmac is a resource compiler and asset manager for Roblox projects. It helps enable hermetic place builds when used with tools like [Rojo](https://github.com/rojo-rbx/rojo).
 
@@ -21,32 +18,26 @@ Tarmac is inspired by projects like [Webpack](https://webpack.js.org/) that make
 
 ## Installation
 
+### Installing with Aftman
+The recommended way to install Tarmac is with [Aftman](https://github.com/LPGhatguy/aftman).
+
+Add an entry to the `[tools]` section of your `aftman.toml` file:
+
+```toml
+tarmac = "vorlias/tarmac@0.7.3"
+```
+
 ### Installing with Foreman
-The recommended way to install Tarmac is with [Foreman](https://github.com/rojo-rbx/foreman).
 
 Add an entry to the `[tools]` section of your `foreman.toml` file:
 
 ```toml
-foreman = { source = "jeparlefrancais/tarmac", version = "0.7.1" }
+tarmac = { source = "vorlias/tarmac", version = "0.7.3" }
 ```
+
 
 ### Installing from GitHub Releases
 Pre-built binaries are available for 64-bit Windows, macOS, and Linux from the [GitHub releases page](https://github.com/Roblox/tarmac/releases).
-
-### Installing from Source
-Tarmac requires Rust 1.39.0 or newer to build.
-
-You can build the latest release of Tarmac from crates.io:
-
-```bash
-cargo install tarmac
-```
-
-or build the latest work from the master branch:
-
-```bash
-cargo install --git https://github.com/Roblox/tarmac
-```
 
 ## Basic Example
 **The [examples](examples) folder contains small, working projects using different features from Tarmac.**
