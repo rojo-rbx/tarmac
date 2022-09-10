@@ -7,6 +7,7 @@ use reqwest::{
     header::{HeaderValue, COOKIE},
     Client, Request, Response, StatusCode,
 };
+use secrecy::{SecretString, ExposeSecret};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -37,7 +38,7 @@ struct RawUploadResponse {
 }
 
 pub struct RobloxApiClient {
-    auth_token: Option<String>,
+    auth_token: Option<SecretString>,
     csrf_token: Option<HeaderValue>,
     client: Client,
 }
@@ -49,7 +50,7 @@ impl fmt::Debug for RobloxApiClient {
 }
 
 impl RobloxApiClient {
-    pub fn new(auth_token: Option<String>) -> Self {
+    pub fn new(auth_token: Option<SecretString>) -> Self {
         Self {
             auth_token,
             csrf_token: None,
@@ -213,7 +214,7 @@ impl RobloxApiClient {
     /// Roblox API, like authentication and CSRF protection.
     fn attach_headers(&self, request: &mut Request) {
         if let Some(auth_token) = &self.auth_token {
-            let cookie_value = format!(".ROBLOSECURITY={}", auth_token);
+            let cookie_value = format!(".ROBLOSECURITY={}", auth_token.expose_secret());
 
             request.headers_mut().insert(
                 COOKIE,
