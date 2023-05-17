@@ -10,10 +10,6 @@
 
 <hr />
 
-This is a more up-to-date fork of the [Tarmac repository](https://github.com/Roblox/Tarmac) by Roblox, since the original repository has effectively been *abandoned* (hasn't had updates since 2020).
-
-Tarmac is a resource compiler and asset manager for Roblox projects. It helps enable hermetic place builds when used with tools like [Rojo](https://github.com/rojo-rbx/rojo).
-
 Tarmac is inspired by projects like [Webpack](https://webpack.js.org/) that make it easy to reference assets from code.
 
 ## Installation
