@@ -1,3 +1,5 @@
+mod rbxcloud_backend;
+
 use std::{
     borrow::Cow,
     io,
@@ -235,6 +237,12 @@ pub enum Error {
         #[from]
         source: RobloxApiError,
     },
+
+    #[error(transparent)]
+    RobloxCloudError {
+        #[from]
+        source: rbxcloud::rbx::error::Error,
+    }
 }
 
 #[cfg(test)]

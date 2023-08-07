@@ -20,7 +20,7 @@ The recommended way to install Tarmac is with [Aftman](https://github.com/LPGhat
 Add an entry to the `[tools]` section of your `aftman.toml` file:
 
 ```toml
-tarmac = "rojo-rbx/tarmac@0.7.3"
+tarmac = "rojo-rbx/tarmac@0.7.4"
 ```
 
 ### Installing with Foreman
@@ -28,7 +28,7 @@ tarmac = "rojo-rbx/tarmac@0.7.3"
 Add an entry to the `[tools]` section of your `foreman.toml` file:
 
 ```toml
-tarmac = { source = "rojo-rbx/tarmac", version = "0.7.3" }
+tarmac = { source = "rojo-rbx/tarmac", version = "0.7.4" }
 ```
 
 

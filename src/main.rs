@@ -10,6 +10,7 @@ mod lua_ast;
 mod options;
 mod roblox_web_api;
 mod sync_backend;
+mod roblox_cloud_api;
 
 use std::{env, panic, process};
 
