@@ -139,22 +139,17 @@ impl RbxCloudApi {
         if let Some(path) = upload_operation.path {
             println!("op_path = {:#?}", path);
 
+            let client2 = reqwest::Client::new();
+
             // Check uploaded asset - https://create.roblox.com/docs/cloud/open-cloud/usage-assets#checking-an-uploaded-asset
-            let check_res = client
-                .get(&format!(
-                    "https://apis.roblox.com/assets/v1/{operation_id}",
-                    operation_id = path
-                ))
+            let check_res = client2
+                .get(&format!("https://apis.roblox.com/assets/v1/{}", path))
                 .header("x-api-key", &self.api_key)
                 .send()?;
 
-            let check_operation = handle_res::<AssetCreateResponseOperation>(check_res)?;
+            let check_operation = handle_res::<AssetOperation>(check_res)?;
 
             println!("{:#?}", check_operation);
-            // if let Some(response) = check_operation.response {
-            //     let id_str = response.get_asset_id();
-            //     return Ok(id_str);
-            // }
 
             panic!("TODO");
         } else {
@@ -163,35 +158,45 @@ impl RbxCloudApi {
     }
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct AssetCreateResponseOperation {
-    pub path: Option<String>,
-    pub metadata: Option<ProtobufAny>,
-    pub done: Option<bool>,
-    pub error: Option<AssetErrorStatus>,
-    pub response: Option<AssetOperationResponse>,
+const test_str: &str = r#"
+{
+	"path": "operations/xxxyyyyzzz",
+	"done": true,
+	"response": {
+		"@type": "type.googleapis.com/roblox.open_cloud.assets.v1.Asset",
+		"path": "assets/14348861154",
+		"revisionId": "1",
+		"revisionCreateTime": "2023-08-07T12:50:13.620328400Z",
+		"assetId": "14348861154",
+		"displayName": "Test Tarmac v0.8.0 Cloud API",
+		"description": "Uploaded by tarmac",
+		"assetType": "ASSET_TYPE_DECAL",
+		"creationContext": {
+			"creator": {
+				"userId": "4308133"
+			}
+		},
+		"moderationResult": {
+			"moderationState": "MODERATION_STATE_APPROVED"
+		}
+	}
 }
-
-#[derive(Deserialize, Debug)]
-pub struct AssetOperationResponse {
-    #[serde(rename = "@type")]
-    pub message_type: String,
-    // pub path: Option<String>,
-    // pub asset_id: Option<String>,
-
-    #[serde(flatten)]
-    pub rest: HashMap<String, Value>,
-}
-
-impl AssetOperationResponse {
-    // pub fn get_asset_id(self) -> Option<AssetId> {
-    //     self.asset_id.map(|f| AssetId::Id(f.parse().unwrap()))
-    // }
-}
+"#;
 
 mod tests {
     use std::env;
+
+    use rbxcloud::rbx::assets::AssetOperation;
+
+    use super::test_str;
+
+
+    #[test]
+    fn insomnia_raw() {
+        let result = serde_json::from_str::<AssetOperation>(&test_str).unwrap();
+        println!("{:#?}", result);
+    }
+
 
     #[test]
     fn test_upload() {

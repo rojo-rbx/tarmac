@@ -25,8 +25,8 @@ impl RobloxCloudBackend {
 
 impl SyncBackend for RobloxCloudBackend {
     fn upload(&mut self, data: super::UploadInfo) -> Result<super::UploadResponse, super::Error> {        
-        let asset = TarmacCloudAsset::from_bytes(self.creator.clone(), AssetType::DecalPng, data.name, data.contents);
-        let result = self.api.upload(asset).unwrap();
+        // let asset = TarmacCloudAsset::from_bytes(self.creator.clone(), AssetType::DecalPng, data.name, data.contents);
+        // let result = self.api.upload(asset).unwrap();
 
         panic!("TODO");
     }
