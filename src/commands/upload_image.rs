@@ -28,7 +28,8 @@ pub fn upload_image(global: GlobalOptions, options: UploadImageOptions) {
         image_data: Cow::Owned(encoded_image.to_vec()),
         name: &options.name,
         description: &options.description,
-        group_id: None,
+        group_id: options.group_id,
+        user_id: options.user_id,
     };
 
     let client = get_client(global);

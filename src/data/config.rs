@@ -39,6 +39,10 @@ pub struct Config {
     /// not have access to create assets on the group.
     pub upload_to_group_id: Option<u64>,
 
+    /// If specified, requires that all uploaded assets are uploaded to the given user.
+    /// If not specified, Tarmac will use the TARMAC_USER_ID environment variable.
+    pub upload_to_user_id: Option<u64>,
+
     /// A list of paths that Tarmac should search in to find other Tarmac
     /// projects.
     ///

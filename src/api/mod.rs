@@ -17,6 +17,7 @@ pub struct ImageUploadData<'a> {
     pub name: &'a str,
     pub description: &'a str,
     pub group_id: Option<u64>,
+    pub user_id: Option<u64>,
 }
 
 /// Internal representation of what the asset upload endpoint returns, before

@@ -1,3 +1,5 @@
+use std::env;
+
 use rbxcloud::rbx::assets::{
     AssetCreation, AssetCreationContext, AssetCreator, AssetGroupCreator, AssetOperation,
     AssetType, AssetUserCreator,
@@ -6,7 +8,7 @@ use reqwest::{multipart, Client, Response};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{de::DeserializeOwned, Deserialize};
 
-use super::{Api, RobloxApiError};
+use super::{roblox_web::RobloxApiClient, Api, RobloxApiError};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -52,7 +54,9 @@ fn handle_res<T: DeserializeOwned>(mut res: Response) -> Result<T, RobloxApiErro
 
 impl Api for OpenCloudClient {
     fn download_image(&mut self, _id: u64) -> Result<Vec<u8>, RobloxApiError> {
-        todo!("Downloading images not implmented for Open Cloud!");
+        // Fallback onto the web api for downloading
+        let mut roblox_api_client = RobloxApiClient::new(None);
+        roblox_api_client.download_image(15090277769)
     }
 
     fn upload_image(
@@ -72,7 +76,11 @@ impl Api for OpenCloudClient {
                         })
                     })
                     .unwrap_or(AssetCreator::User(AssetUserCreator {
-                        user_id: "1091164489".into(),
+                        user_id: data
+                            .user_id
+                            .map(|id| id.to_string())
+                            .or(env::var("TARMAC_USER_ID").ok())
+                            .expect("No user_id - Either need a user_id or group_id!"),
                     })),
                 expected_price: None,
             },
@@ -97,7 +105,7 @@ impl Api for OpenCloudClient {
         let result = handle_res::<AssetOperation>(response)?;
         let url = format!(
             "https://apis.roblox.com/assets/v1/{operationId}",
-            operationId = result.path.unwrap()
+            operationId = result.path.expect("No operationId path!")
         );
 
         // Continue making a GET for the asset until we get a response.
@@ -111,7 +119,10 @@ impl Api for OpenCloudClient {
             let result = handle_res::<AssetGetOperation>(response)?;
 
             if let Some(response) = result.response {
-                let asset_id: u64 = response.asset_id.parse().unwrap();
+                let asset_id: u64 = response.asset_id.parse().expect(&format!(
+                    "Failed to parse asset_id ({}) as a number!",
+                    response.asset_id
+                ));
 
                 return Ok(super::UploadResponse {
                     asset_id,

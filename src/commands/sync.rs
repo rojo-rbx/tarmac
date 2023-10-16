@@ -54,16 +54,17 @@ pub fn sync(global: GlobalOptions, options: SyncOptions) -> Result<(), SyncError
     match &options.target {
         SyncTarget::Roblox => {
             let group_id = session.root_config().upload_to_group_id;
+            let user_id = session.root_config().upload_to_user_id;
             match api_client {
                 Clients::OpenCloud(ref mut open_cloud) => sync_session(
                     &mut session,
                     &options,
-                    RobloxSyncBackend::new(open_cloud, group_id),
+                    RobloxSyncBackend::new(open_cloud, group_id, user_id),
                 ),
                 Clients::RobloxApi(ref mut roblox_api) => sync_session(
                     &mut session,
                     &options,
-                    RobloxSyncBackend::new(roblox_api, group_id),
+                    RobloxSyncBackend::new(roblox_api, group_id, user_id),
                 ),
             };
         }

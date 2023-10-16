@@ -61,6 +61,17 @@ pub struct UploadImageOptions {
     /// The description to give to the resulting Decal asset.
     #[structopt(long, default_value = "Uploaded by Tarmac.")]
     pub description: String,
+
+    /// If specified, the image will be uploaded to the given group.
+    /// The upload will fail if the authenticated user does
+    /// not have access to create assets on the group.
+    #[structopt(long, name = "group-id")]
+    pub group_id: Option<u64>,
+
+    /// If specified, the image will be uploaded to the given user.
+    /// If not specified, Tarmac will use the TARMAC_USER_ID environment variable.
+    #[structopt(long, name = "user-id")]
+    pub user_id: Option<u64>,
 }
 
 #[derive(Debug, StructOpt)]

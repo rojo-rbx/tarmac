@@ -33,13 +33,19 @@ pub struct UploadInfo {
 pub struct RobloxSyncBackend<'a, Client: Api> {
     api_client: &'a mut Client,
     upload_to_group_id: Option<u64>,
+    upload_to_user_id: Option<u64>,
 }
 
 impl<'a, Client: Api> RobloxSyncBackend<'a, Client> {
-    pub fn new(api_client: &'a mut Client, upload_to_group_id: Option<u64>) -> Self {
+    pub fn new(
+        api_client: &'a mut Client,
+        upload_to_group_id: Option<u64>,
+        upload_to_user_id: Option<u64>,
+    ) -> Self {
         Self {
             api_client,
             upload_to_group_id,
+            upload_to_user_id,
         }
     }
 }
@@ -55,6 +61,7 @@ impl<'a, Client: Api> SyncBackend for RobloxSyncBackend<'a, Client> {
                 name: &data.name,
                 description: "Uploaded by Tarmac.",
                 group_id: self.upload_to_group_id,
+                user_id: self.upload_to_user_id,
             });
 
         match result {
