@@ -1,43 +1,14 @@
-use std::{
-    borrow::Cow,
-    fmt::{self, Write},
-};
+use std::fmt::{self, Write};
 
 use reqwest::{
     header::{HeaderValue, COOKIE},
     Client, Request, Response, StatusCode,
 };
 use secrecy::{ExposeSecret, SecretString};
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
 use crate::auth_cookie::get_csrf_token;
 
-#[derive(Debug, Clone)]
-pub struct ImageUploadData<'a> {
-    pub image_data: Cow<'a, [u8]>,
-    pub name: &'a str,
-    pub description: &'a str,
-    pub group_id: Option<u64>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct UploadResponse {
-    pub asset_id: u64,
-    pub backing_asset_id: u64,
-}
-
-/// Internal representation of what the asset upload endpoint returns, before
-/// we've handled any errors.
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct RawUploadResponse {
-    success: bool,
-    message: Option<String>,
-    asset_id: Option<u64>,
-    backing_asset_id: Option<u64>,
-}
+use super::{Api, ImageUploadData, RawUploadResponse, RobloxApiError, UploadResponse};
 
 pub struct RobloxApiClient {
     auth_token: Option<SecretString>,
@@ -51,33 +22,8 @@ impl fmt::Debug for RobloxApiClient {
     }
 }
 
-impl RobloxApiClient {
-    pub fn new(auth_token: Option<SecretString>) -> Self {
-        match auth_token {
-            Some(token) => {
-                let csrf_token = match get_csrf_token(&token) {
-                    Ok(value) => Some(value),
-                    Err(err) => {
-                        log::error!("Was unable to fetch CSRF token: {}", err.to_string());
-                        None
-                    }
-                };
-
-                Self {
-                    auth_token: Some(token),
-                    csrf_token,
-                    client: Client::new(),
-                }
-            }
-            _ => Self {
-                auth_token,
-                csrf_token: None,
-                client: Client::new(),
-            },
-        }
-    }
-
-    pub fn download_image(&mut self, id: u64) -> Result<Vec<u8>, RobloxApiError> {
+impl Api for RobloxApiClient {
+    fn download_image(&mut self, id: u64) -> Result<Vec<u8>, RobloxApiError> {
         let url = format!("https://roblox.com/asset?id={}", id);
 
         let mut response =
@@ -89,10 +35,7 @@ impl RobloxApiClient {
         Ok(buffer)
     }
 
-    /// Upload an image, retrying if the asset endpoint determines that the
-    /// asset's name is inappropriate. The asset's name will be replaced with a
-    /// generic known-good string.
-    pub fn upload_image_with_moderation_retry(
+    fn upload_image_with_moderation_retry(
         &mut self,
         data: ImageUploadData,
     ) -> Result<UploadResponse, RobloxApiError> {
@@ -135,11 +78,7 @@ impl RobloxApiClient {
         }
     }
 
-    /// Upload an image, returning an error if anything goes wrong.
-    pub fn upload_image(
-        &mut self,
-        data: ImageUploadData,
-    ) -> Result<UploadResponse, RobloxApiError> {
+    fn upload_image(&mut self, data: ImageUploadData) -> Result<UploadResponse, RobloxApiError> {
         let response = self.upload_image_raw(&data)?;
 
         // Some other errors will be reported inside the response, even
@@ -158,9 +97,34 @@ impl RobloxApiClient {
             Err(RobloxApiError::ApiError { message })
         }
     }
+}
 
-    /// Upload an image, returning the raw response returned by the endpoint,
-    /// which may have further failures to handle.
+impl RobloxApiClient {
+    pub fn new(auth_token: Option<SecretString>) -> Self {
+        match auth_token {
+            Some(token) => {
+                let csrf_token = match get_csrf_token(&token) {
+                    Ok(value) => Some(value),
+                    Err(err) => {
+                        log::error!("Was unable to fetch CSRF token: {}", err.to_string());
+                        None
+                    }
+                };
+
+                Self {
+                    auth_token: Some(token),
+                    csrf_token,
+                    client: Client::new(),
+                }
+            }
+            _ => Self {
+                auth_token,
+                csrf_token: None,
+                client: Client::new(),
+            },
+        }
+    }
+
     fn upload_image_raw(
         &mut self,
         data: &ImageUploadData,
@@ -245,28 +209,4 @@ impl RobloxApiClient {
             request.headers_mut().insert("X-CSRF-Token", csrf.clone());
         }
     }
-}
-
-#[derive(Debug, Error)]
-pub enum RobloxApiError {
-    #[error("Roblox API HTTP error")]
-    Http {
-        #[from]
-        source: reqwest::Error,
-    },
-
-    #[error("Roblox API error: {message}")]
-    ApiError { message: String },
-
-    #[error("Roblox API returned success, but had malformed JSON response: {body}")]
-    BadResponseJson {
-        body: String,
-        source: serde_json::Error,
-    },
-
-    #[error("Roblox API returned HTTP {status} with body: {body}")]
-    ResponseError { status: StatusCode, body: String },
-
-    #[error("Request for CSRF token did not return an X-CSRF-Token header.")]
-    MissingCsrfToken,
 }

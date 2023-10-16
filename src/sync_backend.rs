@@ -11,8 +11,8 @@ use reqwest::StatusCode;
 use roblox_install::RobloxStudio;
 use thiserror::Error;
 
-use crate::data::AssetId;
-use crate::roblox_web_api::{ImageUploadData, RobloxApiClient, RobloxApiError};
+use crate::api::{ImageUploadData, RobloxApiError};
+use crate::{api::Api, data::AssetId};
 
 pub trait SyncBackend {
     fn upload(&mut self, data: UploadInfo) -> Result<UploadResponse, Error>;
@@ -30,13 +30,13 @@ pub struct UploadInfo {
     pub hash: String,
 }
 
-pub struct RobloxSyncBackend<'a> {
-    api_client: &'a mut RobloxApiClient,
+pub struct RobloxSyncBackend<'a, Client: Api> {
+    api_client: &'a mut Client,
     upload_to_group_id: Option<u64>,
 }
 
-impl<'a> RobloxSyncBackend<'a> {
-    pub fn new(api_client: &'a mut RobloxApiClient, upload_to_group_id: Option<u64>) -> Self {
+impl<'a, Client: Api> RobloxSyncBackend<'a, Client> {
+    pub fn new(api_client: &'a mut Client, upload_to_group_id: Option<u64>) -> Self {
         Self {
             api_client,
             upload_to_group_id,
@@ -44,7 +44,7 @@ impl<'a> RobloxSyncBackend<'a> {
     }
 }
 
-impl<'a> SyncBackend for RobloxSyncBackend<'a> {
+impl<'a, Client: Api> SyncBackend for RobloxSyncBackend<'a, Client> {
     fn upload(&mut self, data: UploadInfo) -> Result<UploadResponse, Error> {
         log::info!("Uploading {} to Roblox", &data.name);
 

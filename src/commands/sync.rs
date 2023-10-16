@@ -14,15 +14,14 @@ use walkdir::WalkDir;
 
 use crate::{
     alpha_bleed::alpha_bleed,
+    api::{get_client, Api, Clients, RobloxApiError},
     asset_name::AssetName,
-    auth_cookie::get_auth_cookie,
     codegen::perform_codegen,
     data::{
         AssetId, Config, ConfigError, ImageSlice, InputManifest, Manifest, ManifestError, SyncInput,
     },
     dpi_scale,
     options::{GlobalOptions, SyncOptions, SyncTarget},
-    roblox_web_api::{RobloxApiClient, RobloxApiError},
     sync_backend::{
         DebugSyncBackend, Error as SyncBackendError, LocalSyncBackend, NoneSyncBackend,
         RetryBackend, RobloxSyncBackend, SyncBackend, UploadInfo,
@@ -45,8 +44,7 @@ pub fn sync(global: GlobalOptions, options: SyncOptions) -> Result<(), SyncError
         None => env::current_dir()?,
     };
 
-    let mut api_client = RobloxApiClient::new(global.auth.or_else(get_auth_cookie));
-
+    let mut api_client = get_client(global);
     let mut session = SyncSession::new(&fuzzy_config_path)?;
 
     let project_name = session.root_config().name.to_string();
@@ -56,11 +54,18 @@ pub fn sync(global: GlobalOptions, options: SyncOptions) -> Result<(), SyncError
     match &options.target {
         SyncTarget::Roblox => {
             let group_id = session.root_config().upload_to_group_id;
-            sync_session(
-                &mut session,
-                &options,
-                RobloxSyncBackend::new(&mut api_client, group_id),
-            );
+            match api_client {
+                Clients::OpenCloud(ref mut open_cloud) => sync_session(
+                    &mut session,
+                    &options,
+                    RobloxSyncBackend::new(open_cloud, group_id),
+                ),
+                Clients::RobloxApi(ref mut roblox_api) => sync_session(
+                    &mut session,
+                    &options,
+                    RobloxSyncBackend::new(roblox_api, group_id),
+                ),
+            };
         }
         SyncTarget::Local => {
             sync_session(
@@ -80,7 +85,11 @@ pub fn sync(global: GlobalOptions, options: SyncOptions) -> Result<(), SyncError
     session.write_manifest()?;
     session.codegen()?;
     session.write_asset_list()?;
-    session.populate_asset_cache(&mut api_client)?;
+
+    match api_client {
+        Clients::OpenCloud(ref mut open_cloud) => session.populate_asset_cache(open_cloud)?,
+        Clients::RobloxApi(ref mut roblox_api) => session.populate_asset_cache(roblox_api)?,
+    }
 
     if session.sync_errors.is_empty() {
         Ok(())
@@ -660,7 +669,7 @@ impl SyncSession {
         Ok(())
     }
 
-    fn populate_asset_cache(&self, api_client: &mut RobloxApiClient) -> Result<(), SyncError> {
+    fn populate_asset_cache<Client: Api>(&self, api_client: &mut Client) -> Result<(), SyncError> {
         let cache_path = match &self.root_config().asset_cache_path {
             Some(path) => path,
             None => return Ok(()),

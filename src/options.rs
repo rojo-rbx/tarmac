@@ -15,11 +15,17 @@ pub struct Options {
 
 #[derive(Debug, StructOpt)]
 pub struct GlobalOptions {
+    /// The OpenCloud API key for Tarmac to use. If not specified, Tarmac will use the
+    /// TARMAC_API_KEY environment variable. If the environment variable is not set, Tarmac will
+    /// fall back on using the authentication cookie.
+    #[structopt(long, global(true), name = "api-key")]
+    pub api_key: Option<SecretString>,
+
     /// The authentication cookie for Tarmac to use. If not specified, Tarmac
     /// will attempt to use the cookie from the Roblox Studio installation on
     /// the system.
     #[structopt(long, global(true))]
-    pub auth: Option<SecretString>,
+    pub cookie: Option<SecretString>,
 
     /// Sets verbosity level. Can be specified multiple times.
     #[structopt(long = "verbose", short, global(true), parse(from_occurrences))]

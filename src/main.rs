@@ -1,4 +1,5 @@
 mod alpha_bleed;
+mod api;
 mod asset_name;
 mod auth_cookie;
 mod codegen;
@@ -8,7 +9,6 @@ mod dpi_scale;
 mod glob;
 mod lua_ast;
 mod options;
-mod roblox_web_api;
 mod sync_backend;
 
 use std::{env, panic, process};

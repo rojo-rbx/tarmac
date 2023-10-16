@@ -87,7 +87,10 @@ These options can be specified alongside any subcommands and are all optional.
 	* Prints help information about Tarmac and exits.
 * `--version`, `-V`
 	* Prints version information about Tarmac and exits.
-* `--auth <cookie>`
+* `--api-key <api-key>`
+	* Explicitly defines the API key Tarmac will use to communicate with Roblox's Open Cloud API.
+	* If not specified, Tarmac will use the `TARMAC_API_KEY` environment variable.
+* `--cookie <cookie>`
 	* Explicitly defines the authentication cookie Tarmac should use to communicate with Roblox.
 	* If not specified, Tarmac will attempt to locate one from the local system.
 * `--verbose`, `-v`
