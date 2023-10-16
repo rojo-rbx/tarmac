@@ -1,12 +1,35 @@
 use rbxcloud::rbx::assets::{
-    AssetCreation, AssetCreationContext, AssetCreator, AssetGetOperation, AssetGroupCreator,
-    AssetOperation, AssetType, AssetUserCreator,
+    AssetCreation, AssetCreationContext, AssetCreator, AssetGroupCreator, AssetOperation,
+    AssetType, AssetUserCreator,
 };
 use reqwest::{multipart, Client, Response};
 use secrecy::{ExposeSecret, SecretString};
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Deserialize};
 
 use super::{Api, RobloxApiError};
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct AssetGetOperation {
+    pub path: String,
+    pub done: Option<bool>,
+    pub response: Option<AssetGetOperationResponse>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct AssetGetOperationResponse {
+    #[serde(rename = "@type")]
+    pub response_type: Option<String>,
+    pub path: String,
+    pub revision_id: String,
+    pub revision_create_time: String,
+    pub asset_id: String,
+    pub display_name: String,
+    pub description: String,
+    pub asset_type: String,
+    pub creation_context: AssetCreationContext,
+}
 
 pub struct OpenCloudClient {
     api_key: SecretString,
@@ -72,28 +95,30 @@ impl Api for OpenCloudClient {
             .send()?;
 
         let result = handle_res::<AssetOperation>(response)?;
-
-        std::thread::sleep(std::time::Duration::from_secs(3));
-
         let url = format!(
             "https://apis.roblox.com/assets/v1/{operationId}",
             operationId = result.path.unwrap()
         );
-        let response = self
-            .client
-            .get(&url)
-            .header("x-api-key", self.api_key.expose_secret())
-            .send()?;
 
-        let result = handle_res::<AssetGetOperation>(response)?;
-        let response = result.response;
+        // Continue making a GET for the asset until we get a response.
+        loop {
+            let response = self
+                .client
+                .get(&url)
+                .header("x-api-key", self.api_key.expose_secret())
+                .send()?;
 
-        let asset_id: u64 = response.asset_id.parse().unwrap();
+            let result = handle_res::<AssetGetOperation>(response)?;
 
-        Ok(super::UploadResponse {
-            asset_id,
-            backing_asset_id: asset_id,
-        })
+            if let Some(response) = result.response {
+                let asset_id: u64 = response.asset_id.parse().unwrap();
+
+                return Ok(super::UploadResponse {
+                    asset_id,
+                    backing_asset_id: asset_id,
+                });
+            }
+        }
     }
 
     fn upload_image_with_moderation_retry(
