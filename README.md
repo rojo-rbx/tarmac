@@ -1,5 +1,3 @@
-# NOTE: [THIS FORK OF TARMAC HAS BEEN MOVED TO ROJO-RBX](https://github.com/rojo-rbx/tarmac)
-
 <div align="center">
     <h1>Tarmac</h1>
 </div>
@@ -12,10 +10,6 @@
 
 <hr />
 
-This is a more up-to-date fork of the [Tarmac repository](https://github.com/Roblox/Tarmac) by Roblox, since the original repository has effectively been *abandoned* (hasn't had updates since 2020).
-
-Tarmac is a resource compiler and asset manager for Roblox projects. It helps enable hermetic place builds when used with tools like [Rojo](https://github.com/rojo-rbx/rojo).
-
 Tarmac is inspired by projects like [Webpack](https://webpack.js.org/) that make it easy to reference assets from code.
 
 ## Installation
@@ -26,7 +20,7 @@ The recommended way to install Tarmac is with [Aftman](https://github.com/LPGhat
 Add an entry to the `[tools]` section of your `aftman.toml` file:
 
 ```toml
-tarmac = "vorlias/tarmac@0.7.3"
+tarmac = "rojo-rbx/tarmac@0.7.4"
 ```
 
 ### Installing with Foreman
@@ -34,7 +28,7 @@ tarmac = "vorlias/tarmac@0.7.3"
 Add an entry to the `[tools]` section of your `foreman.toml` file:
 
 ```toml
-tarmac = { source = "vorlias/tarmac", version = "0.7.3" }
+tarmac = { source = "rojo-rbx/tarmac", version = "0.7.4" }
 ```
 
 
