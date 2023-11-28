@@ -1,37 +1,14 @@
 use std::env;
 
 use rbxcloud::rbx::assets::{
-    AssetCreation, AssetCreationContext, AssetCreator, AssetGroupCreator, AssetOperation,
-    AssetType, AssetUserCreator,
+    AssetCreation, AssetCreationContext, AssetCreator, AssetGetOperation, AssetGroupCreator,
+    AssetOperation, AssetType, AssetUserCreator,
 };
 use reqwest::{multipart, Client, Response};
 use secrecy::{ExposeSecret, SecretString};
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::de::DeserializeOwned;
 
 use super::{roblox_web::RobloxApiClient, Api, RobloxApiError};
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct AssetGetOperation {
-    pub path: String,
-    pub done: Option<bool>,
-    pub response: Option<AssetGetOperationResponse>,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct AssetGetOperationResponse {
-    #[serde(rename = "@type")]
-    pub response_type: Option<String>,
-    pub path: String,
-    pub revision_id: String,
-    pub revision_create_time: String,
-    pub asset_id: String,
-    pub display_name: String,
-    pub description: String,
-    pub asset_type: String,
-    pub creation_context: AssetCreationContext,
-}
 
 pub struct OpenCloudClient {
     api_key: SecretString,
@@ -53,10 +30,10 @@ fn handle_res<T: DeserializeOwned>(mut res: Response) -> Result<T, RobloxApiErro
 }
 
 impl Api for OpenCloudClient {
-    fn download_image(&mut self, _id: u64) -> Result<Vec<u8>, RobloxApiError> {
+    fn download_image(&mut self, id: u64) -> Result<Vec<u8>, RobloxApiError> {
         // Fallback onto the web api for downloading
         let mut roblox_api_client = RobloxApiClient::new(None);
-        roblox_api_client.download_image(15090277769)
+        roblox_api_client.download_image(id)
     }
 
     fn upload_image(

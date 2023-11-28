@@ -46,6 +46,12 @@ pub enum RobloxApiError {
         source: reqwest::Error,
     },
 
+    #[error("Roblox OpenCloud error")]
+    RbxCloud {
+        #[from]
+        source: rbxcloud::rbx::error::Error,
+    },
+
     #[error("Roblox API error: {message}")]
     ApiError { message: String },
 
