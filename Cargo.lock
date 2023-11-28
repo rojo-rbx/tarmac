@@ -2576,6 +2576,7 @@ dependencies = [
  "serde_json",
  "structopt",
  "thiserror",
+ "tokio 1.34.0",
  "toml",
  "walkdir",
 ]

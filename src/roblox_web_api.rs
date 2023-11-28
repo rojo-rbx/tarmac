@@ -1,9 +1,17 @@
 use std::{
     borrow::Cow,
     fmt::{self, Write},
+    time::Duration,
 };
 
-use rbxcloud::rbx::assets::{AssetCreator, AssetGroupCreator, AssetUserCreator};
+use rbxcloud::rbx::{
+    assets::{
+        AssetCreation, AssetCreationContext, AssetCreator, AssetGroupCreator, AssetType,
+        AssetUserCreator,
+    },
+    error::Error as RbxCloudError,
+    CreateAssetWithContents, GetAsset, RbxCloud,
+};
 use reqwest::{
     header::{HeaderValue, COOKIE},
     Client, Request, Response, StatusCode,
@@ -11,6 +19,7 @@ use reqwest::{
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tokio::runtime::Runtime;
 
 use crate::auth_cookie::get_csrf_token;
 
@@ -45,6 +54,7 @@ pub struct RobloxApiClient {
     csrf_token: Option<HeaderValue>,
     credentials: RobloxCredentials,
     client: Client,
+    runtime: Runtime,
 }
 
 #[derive(Debug)]
@@ -114,6 +124,7 @@ If you mean to use the Open Cloud API, make sure to provide an API key!
             csrf_token,
             creator,
             credentials,
+            runtime: Runtime::new().unwrap(),
             client: Client::new(),
         })
     }
@@ -137,51 +148,39 @@ If you mean to use the Open Cloud API, make sure to provide an API key!
         &mut self,
         data: ImageUploadData,
     ) -> Result<UploadResponse, RobloxApiError> {
-        let response = self.upload_image_raw(&data)?;
+        let name = "image";
+        let warn = || {
+            log::warn!(
+                "Image name '{}' was moderated, retrying with different name...",
+                data.name
+            );
+        };
 
-        // Some other errors will be reported inside the response, even
-        // though we received a successful HTTP response.
-        if response.success {
-            let asset_id = response.asset_id.unwrap();
-            let backing_asset_id = response.backing_asset_id.unwrap();
+        match self.upload_image(&data) {
+            Ok(response) => Ok(response),
 
-            Ok(UploadResponse {
-                asset_id,
-                backing_asset_id,
-            })
-        } else {
-            let message = response.message.unwrap();
-
-            // There are no status codes for this API, so we pattern match
-            // on the returned error message.
-            //
-            // If the error message text mentions something being
-            // inappropriate, we assume the title was problematic and
-            // attempt to re-upload.
-            if message.contains("inappropriate") {
-                log::warn!(
-                    "Image name '{}' was moderated, retrying with different name...",
-                    data.name
-                );
-
-                let new_data = ImageUploadData {
-                    name: "image",
-                    ..data
-                };
-
-                self.upload_image(new_data)
-            } else {
-                Err(RobloxApiError::ApiError { message })
+            Err(RobloxApiError::ApiError { message }) if message.contains("inappropriate") => {
+                warn();
+                self.upload_image(&ImageUploadData { name, ..data })
             }
+
+            Err(RobloxApiError::ResponseError { status, body })
+                if status == 400 && body.contains("moderated") =>
+            {
+                warn();
+                self.upload_image(&ImageUploadData { name, ..data })
+            }
+
+            Err(e) => Err(e),
         }
     }
 
     /// Upload an image, returning an error if anything goes wrong.
     pub fn upload_image(
         &mut self,
-        data: ImageUploadData,
+        data: &ImageUploadData,
     ) -> Result<UploadResponse, RobloxApiError> {
-        let response = self.upload_image_raw(&data)?;
+        let response = self.upload_image_with_preferred_api(&data)?;
 
         // Some other errors will be reported inside the response, even
         // though we received a successful HTTP response.
@@ -200,9 +199,105 @@ If you mean to use the Open Cloud API, make sure to provide an API key!
         }
     }
 
+    fn upload_image_with_preferred_api(
+        &mut self,
+        data: &ImageUploadData,
+    ) -> Result<RawUploadResponse, RobloxApiError> {
+        match &self.credentials.api_key {
+            Some(_) => {
+                let api_key = self
+                    .credentials
+                    .api_key
+                    .as_ref()
+                    .ok_or(RobloxApiError::MissingAuth)?;
+
+                let creator = self
+                    .creator
+                    .as_ref()
+                    .ok_or(RobloxApiError::ApiKeyNeedsCreatorId)?;
+
+                self.upload_image_open_cloud(api_key, creator, data)
+            }
+            None => self.upload_image_legacy(data),
+        }
+    }
+
+    fn upload_image_open_cloud(
+        &self,
+        api_key: &SecretString,
+        creator: &AssetCreator,
+        data: &ImageUploadData,
+    ) -> Result<RawUploadResponse, RobloxApiError> {
+        let assets = RbxCloud::new(api_key.expose_secret()).assets();
+
+        let map_response_error = |e| match e {
+            RbxCloudError::HttpStatusError { code, msg } => RobloxApiError::ResponseError {
+                status: StatusCode::from_u16(code).unwrap_or_default(),
+                body: msg,
+            },
+            _ => RobloxApiError::RbxCloud(e),
+        };
+
+        let asset_info = CreateAssetWithContents {
+            asset: AssetCreation {
+                asset_type: AssetType::DecalPng,
+                display_name: data.name.to_string(),
+                description: data.description.to_string(),
+                creation_context: AssetCreationContext {
+                    creator: creator.clone(),
+                    expected_price: None,
+                },
+            },
+            contents: &data.image_data,
+        };
+
+        let operation_id = self
+            .runtime
+            .block_on(async { assets.create_with_contents(&asset_info).await })
+            .map_err(map_response_error)
+            .map(|response| response.path)?
+            .ok_or(RobloxApiError::MissingOperationPath)?
+            .strip_prefix("operations/")
+            .ok_or(RobloxApiError::MalformedOperationPath)?
+            .to_string();
+
+        const MAX_RETRIES: u32 = 5;
+        const INITIAL_SLEEP_DURATION: Duration = Duration::from_millis(50);
+        const BACKOFF: u32 = 2;
+
+        let mut retry_count = 0;
+        let asset_id = loop {
+            let operation_id = operation_id.clone();
+            let maybe_asset_id = self
+                .runtime
+                .block_on(async { assets.get(&GetAsset { operation_id }).await })
+                .map_err(map_response_error)?
+                .response
+                .map(|response| response.asset_id)
+                .map(|id| id.parse::<u64>().map_err(RobloxApiError::MalformedAssetId));
+
+            match maybe_asset_id {
+                Some(id) => break id,
+                None if retry_count > MAX_RETRIES => break Err(RobloxApiError::AssetGetFailed),
+
+                _ => {
+                    retry_count += 1;
+                    std::thread::sleep(INITIAL_SLEEP_DURATION * retry_count.pow(BACKOFF));
+                }
+            }
+        }?;
+
+        Ok(RawUploadResponse {
+            success: true,
+            message: None,
+            asset_id: Some(asset_id),
+            backing_asset_id: Some(asset_id),
+        })
+    }
+
     /// Upload an image, returning the raw response returned by the endpoint,
     /// which may have further failures to handle.
-    fn upload_image_raw(
+    fn upload_image_legacy(
         &mut self,
         data: &ImageUploadData,
     ) -> Result<RawUploadResponse, RobloxApiError> {
@@ -322,4 +417,16 @@ pub enum RobloxApiError {
 
     #[error("Group ID and user ID cannot both be specified")]
     AmbiguousCreatorType,
+
+    #[error("Operation path is missing")]
+    MissingOperationPath,
+
+    #[error("Operation path is malformed")]
+    MalformedOperationPath,
+
+    #[error("Open Cloud API error")]
+    RbxCloud(#[from] RbxCloudError),
+
+    #[error("Failed to parse asset ID from asset get response")]
+    MalformedAssetId(#[from] std::num::ParseIntError),
 }
