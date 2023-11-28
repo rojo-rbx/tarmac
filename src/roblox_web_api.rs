@@ -3,6 +3,7 @@ use std::{
     fmt::{self, Write},
 };
 
+use rbxcloud::rbx::assets::{AssetCreator, AssetGroupCreator, AssetUserCreator};
 use reqwest::{
     header::{HeaderValue, COOKIE},
     Client, Request, Response, StatusCode,
@@ -18,7 +19,6 @@ pub struct ImageUploadData<'a> {
     pub image_data: Cow<'a, [u8]>,
     pub name: &'a str,
     pub description: &'a str,
-    pub group_id: Option<u64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -40,9 +40,19 @@ struct RawUploadResponse {
 }
 
 pub struct RobloxApiClient {
-    auth_token: Option<SecretString>,
+    pub creator: Option<AssetCreator>,
+
     csrf_token: Option<HeaderValue>,
+    credentials: RobloxCredentials,
     client: Client,
+}
+
+#[derive(Debug)]
+pub struct RobloxCredentials {
+    pub token: Option<SecretString>,
+    pub api_key: Option<SecretString>,
+    pub user_id: Option<u64>,
+    pub group_id: Option<u64>,
 }
 
 impl fmt::Debug for RobloxApiClient {
@@ -52,29 +62,60 @@ impl fmt::Debug for RobloxApiClient {
 }
 
 impl RobloxApiClient {
-    pub fn new(auth_token: Option<SecretString>) -> Self {
-        match auth_token {
-            Some(token) => {
-                let csrf_token = match get_csrf_token(&token) {
-                    Ok(value) => Some(value),
-                    Err(err) => {
-                        log::error!("Was unable to fetch CSRF token: {}", err.to_string());
-                        None
-                    }
-                };
+    pub fn new(credentials: RobloxCredentials) -> Result<Self, RobloxApiError> {
+        if credentials.api_key.is_none() && credentials.token.is_none() {
+            return Err(RobloxApiError::MissingAuth);
+        }
 
-                Self {
-                    auth_token: Some(token),
-                    csrf_token,
-                    client: Client::new(),
+        let csrf_token = if let Some(token) = &credentials.token {
+            match get_csrf_token(&token) {
+                Ok(value) => Some(value),
+                Err(err) => {
+                    log::error!("Was unable to fetch CSRF token: {}", err.to_string());
+                    None
                 }
             }
-            _ => Self {
-                auth_token,
-                csrf_token: None,
-                client: Client::new(),
-            },
-        }
+        } else {
+            None
+        };
+
+        let creator = match (
+            &credentials.api_key,
+            credentials.group_id,
+            credentials.user_id,
+        ) {
+            (_, Some(id), None) => Some(AssetCreator::Group(AssetGroupCreator {
+                group_id: id.to_string(),
+            })),
+
+            (api_key, None, Some(id)) => {
+                if api_key.is_none() {
+                    log::warn!("{}", "A user ID was specified, but no API key was specified.
+
+Tarmac will attempt to upload to the currently logged-in user or to the user associated with the token given in --auth.
+
+If you mean to use the Open Cloud API, make sure to provide an API key!
+")
+                }
+
+                Some(AssetCreator::User(AssetUserCreator {
+                    user_id: id.to_string(),
+                }))
+            }
+
+            (Some(_), None, None) => return Err(RobloxApiError::ApiKeyNeedsCreatorId),
+
+            (_, Some(_), Some(_)) => return Err(RobloxApiError::AmbiguousCreatorType),
+
+            (None, None, None) => None,
+        };
+
+        Ok(Self {
+            csrf_token,
+            creator,
+            credentials,
+            client: Client::new(),
+        })
     }
 
     pub fn download_image(&mut self, id: u64) -> Result<Vec<u8>, RobloxApiError> {
@@ -167,7 +208,7 @@ impl RobloxApiClient {
     ) -> Result<RawUploadResponse, RobloxApiError> {
         let mut url = "https://data.roblox.com/data/upload/json?assetTypeId=13".to_owned();
 
-        if let Some(group_id) = data.group_id {
+        if let Some(AssetCreator::Group(AssetGroupCreator { group_id })) = &self.creator {
             write!(url, "&groupId={}", group_id).unwrap();
         }
 
@@ -232,7 +273,7 @@ impl RobloxApiClient {
     /// Attach required headers to a request object before sending it to a
     /// Roblox API, like authentication and CSRF protection.
     fn attach_headers(&self, request: &mut Request) {
-        if let Some(auth_token) = &self.auth_token {
+        if let Some(auth_token) = &self.credentials.token {
             let cookie_value = format!(".ROBLOSECURITY={}", auth_token.expose_secret());
 
             request.headers_mut().insert(
@@ -269,4 +310,16 @@ pub enum RobloxApiError {
 
     #[error("Request for CSRF token did not return an X-CSRF-Token header.")]
     MissingCsrfToken,
+
+    #[error("Failed to retrieve asset ID from Roblox cloud")]
+    AssetGetFailed,
+
+    #[error("Either a group or a user ID must be specified when using an API key")]
+    ApiKeyNeedsCreatorId,
+
+    #[error("Tarmac is unable to locate an authentication method")]
+    MissingAuth,
+
+    #[error("Group ID and user ID cannot both be specified")]
+    AmbiguousCreatorType,
 }

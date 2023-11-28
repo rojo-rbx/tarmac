@@ -21,6 +21,9 @@ pub struct GlobalOptions {
     #[structopt(long, global(true))]
     pub auth: Option<SecretString>,
 
+    #[structopt(long, global(true), env = "TARMAC_API_KEY")]
+    pub api_key: Option<SecretString>,
+
     /// Sets verbosity level. Can be specified multiple times.
     #[structopt(long = "verbose", short, global(true), parse(from_occurrences))]
     pub verbosity: u8,

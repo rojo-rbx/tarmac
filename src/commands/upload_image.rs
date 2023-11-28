@@ -8,10 +8,13 @@ use crate::{
     alpha_bleed::alpha_bleed,
     auth_cookie::get_auth_cookie,
     options::{GlobalOptions, UploadImageOptions},
-    roblox_web_api::{ImageUploadData, RobloxApiClient},
+    roblox_web_api::{ImageUploadData, RobloxApiClient, RobloxApiError, RobloxCredentials},
 };
 
-pub fn upload_image(global: GlobalOptions, options: UploadImageOptions) {
+pub fn upload_image(
+    global: GlobalOptions,
+    options: UploadImageOptions,
+) -> Result<(), RobloxApiError> {
     let auth = global
         .auth
         .or_else(get_auth_cookie)
@@ -30,13 +33,17 @@ pub fn upload_image(global: GlobalOptions, options: UploadImageOptions) {
         .encode(&img.to_bytes(), width, height, img.color())
         .unwrap();
 
-    let mut client = RobloxApiClient::new(Some(auth));
+    let mut client = RobloxApiClient::new(RobloxCredentials {
+        token: Some(auth),
+        api_key: global.api_key,
+        user_id: None,
+        group_id: None,
+    })?;
 
     let upload_data = ImageUploadData {
         image_data: Cow::Owned(encoded_image.to_vec()),
         name: &options.name,
         description: &options.description,
-        group_id: None,
     };
 
     let response = client
@@ -45,4 +52,6 @@ pub fn upload_image(global: GlobalOptions, options: UploadImageOptions) {
 
     eprintln!("Image uploaded successfully!");
     println!("{}", response.backing_asset_id);
+
+    Ok(())
 }

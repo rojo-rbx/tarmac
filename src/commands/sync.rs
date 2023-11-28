@@ -22,7 +22,7 @@ use crate::{
     },
     dpi_scale,
     options::{GlobalOptions, SyncOptions, SyncTarget},
-    roblox_web_api::{RobloxApiClient, RobloxApiError},
+    roblox_web_api::{RobloxApiClient, RobloxApiError, RobloxCredentials},
     sync_backend::{
         DebugSyncBackend, Error as SyncBackendError, LocalSyncBackend, NoneSyncBackend,
         RetryBackend, RobloxSyncBackend, SyncBackend, UploadInfo,
@@ -45,9 +45,14 @@ pub fn sync(global: GlobalOptions, options: SyncOptions) -> Result<(), SyncError
         None => env::current_dir()?,
     };
 
-    let mut api_client = RobloxApiClient::new(global.auth.or_else(get_auth_cookie));
-
     let mut session = SyncSession::new(&fuzzy_config_path)?;
+
+    let mut api_client = RobloxApiClient::new(RobloxCredentials {
+        token: global.auth.or_else(get_auth_cookie),
+        api_key: global.api_key,
+        group_id: session.root_config().upload_to_group_id,
+        user_id: session.root_config().upload_to_user_id,
+    })?;
 
     let project_name = session.root_config().name.to_string();
     session.discover_configs()?;
@@ -55,11 +60,10 @@ pub fn sync(global: GlobalOptions, options: SyncOptions) -> Result<(), SyncError
 
     match &options.target {
         SyncTarget::Roblox => {
-            let group_id = session.root_config().upload_to_group_id;
             sync_session(
                 &mut session,
                 &options,
-                RobloxSyncBackend::new(&mut api_client, group_id),
+                RobloxSyncBackend::new(&mut api_client),
             );
         }
         SyncTarget::Local => {
