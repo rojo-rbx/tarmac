@@ -96,10 +96,12 @@ impl Api for OpenCloudClient {
             let result = handle_res::<AssetGetOperation>(response)?;
 
             if let Some(response) = result.response {
-                let asset_id: u64 = response.asset_id.parse().expect(&format!(
-                    "Failed to parse asset_id ({}) as a number!",
-                    response.asset_id
-                ));
+                let asset_id: u64 = response.asset_id.parse().unwrap_or_else(|_| {
+                    panic!(
+                        "Failed to parse asset_id ({}) as a number!",
+                        response.asset_id
+                    )
+                });
 
                 return Ok(super::UploadResponse {
                     asset_id,

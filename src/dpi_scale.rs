@@ -47,7 +47,7 @@ pub(crate) fn extract_path_info<P: AsRef<Path>>(path: P) -> DpiAwarePathInfo {
             let dpi_scale = scale_str.parse().unwrap();
 
             let file_name_without_dpi_scale = format!("{}{}", file_stem, suffix);
-            let path_without_dpi_scale = path.with_file_name(&file_name_without_dpi_scale);
+            let path_without_dpi_scale = path.with_file_name(file_name_without_dpi_scale);
 
             DpiAwarePathInfo {
                 path_without_dpi_scale,

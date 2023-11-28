@@ -93,10 +93,10 @@ pub fn get_client(options: GlobalOptions) -> Clients {
         .api_key
         .or(env::var("TARMAC_API_KEY").ok().map(SecretString::new))
     {
-        return Clients::OpenCloud(OpenCloudClient::new(api_key));
+        Clients::OpenCloud(OpenCloudClient::new(api_key))
     } else {
-        return Clients::RobloxApi(RobloxApiClient::new(
+        Clients::RobloxApi(RobloxApiClient::new(
             options.cookie.or_else(get_auth_cookie),
-        ));
+        ))
     }
 }

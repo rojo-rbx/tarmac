@@ -164,7 +164,7 @@ impl SyncBackend for DebugSyncBackend {
         fs::create_dir_all(path)?;
 
         let file_path = path.join(id.to_string());
-        fs::write(&file_path, &data.contents)?;
+        fs::write(file_path, &data.contents)?;
 
         Ok(UploadResponse {
             id: AssetId::Id(id),
@@ -350,10 +350,7 @@ mod test {
             let upload_result = backend.upload(any_upload_info()).unwrap_err();
 
             assert_eq!(counter, 3);
-            assert!(match upload_result {
-                Error::RateLimited => true,
-                _ => false,
-            });
+            assert!(matches!(upload_result, Error::RateLimited));
         }
     }
 }

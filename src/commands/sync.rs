@@ -143,7 +143,7 @@ impl SyncSession {
     fn new(fuzzy_config_path: &Path) -> Result<Self, SyncError> {
         log::trace!("Starting new sync session");
 
-        let root_config = Config::read_from_folder_or_file(&fuzzy_config_path)?;
+        let root_config = Config::read_from_folder_or_file(fuzzy_config_path)?;
 
         log::trace!("Starting from config \"{}\"", root_config.name);
 
@@ -585,27 +585,27 @@ impl SyncSession {
     fn write_manifest(&self) -> Result<(), SyncError> {
         log::trace!("Generating new manifest");
 
-        let mut manifest = Manifest::default();
-
-        manifest.inputs = self
-            .inputs
-            .iter()
-            .map(|(name, input)| {
-                let id = input.id.as_ref().and_then(|asset_id| match asset_id {
-                    AssetId::Id(id) => Some(*id),
-                    _ => None,
-                });
-                (
-                    name.clone(),
-                    InputManifest {
-                        hash: input.hash.clone(),
-                        id,
-                        slice: input.slice,
-                        packable: input.config.packable,
-                    },
-                )
-            })
-            .collect();
+        let manifest = Manifest {
+            inputs: self
+                .inputs
+                .iter()
+                .map(|(name, input)| {
+                    let id = input.id.as_ref().and_then(|asset_id| match asset_id {
+                        AssetId::Id(id) => Some(*id),
+                        _ => None,
+                    });
+                    (
+                        name.clone(),
+                        InputManifest {
+                            hash: input.hash.clone(),
+                            id,
+                            slice: input.slice,
+                            packable: input.config.packable,
+                        },
+                    )
+                })
+                .collect(),
+        };
 
         manifest.write_to_folder(self.root_config().folder())?;
 
@@ -678,7 +678,7 @@ impl SyncSession {
 
         log::debug!("Populating asset cache");
 
-        fs_err::create_dir_all(&cache_path)?;
+        fs_err::create_dir_all(cache_path)?;
 
         let known_ids: HashSet<u64> = self
             .inputs
@@ -692,7 +692,7 @@ impl SyncSession {
             .collect();
 
         // Clean up cache items that aren't present in our current project.
-        for entry in fs_err::read_dir(&cache_path)? {
+        for entry in fs_err::read_dir(cache_path)? {
             let entry = entry?;
             let path = entry.path();
             let metadata = fs_err::metadata(&path)?;
@@ -831,11 +831,11 @@ pub enum SyncError {
 
 impl SyncError {
     pub fn is_rate_limited(&self) -> bool {
-        match self {
+        matches!(
+            self,
             Self::Backend {
                 source: SyncBackendError::RateLimited,
-            } => true,
-            _ => false,
-        }
+            }
+        )
     }
 }
