@@ -39,7 +39,8 @@ pub enum Subcommand {
     Sync(SyncOptions),
 
     /// Downloads any packed spritesheets, then generates a file mapping asset
-    /// IDs to file paths.
+    /// IDs to file paths. This command only works when logged into Roblox
+    /// Studio or when a .ROBLOSECURITY token is passed via --auth.
     CreateCacheMap(CreateCacheMapOptions),
 
     /// Creates a file that lists all assets required by the project.
