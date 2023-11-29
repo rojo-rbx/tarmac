@@ -58,6 +58,15 @@ pub struct UploadImageOptions {
     /// The description to give to the resulting Decal asset.
     #[structopt(long, default_value = "Uploaded by Tarmac.")]
     pub description: String,
+
+    /// The ID of the user to upload to. This option only has effect when using
+    /// an API key.
+    #[structopt(long)]
+    pub user_id: Option<u64>,
+
+    /// The ID of the group to upload to.
+    #[structopt(long)]
+    pub group_id: Option<u64>,
 }
 
 #[derive(Debug, StructOpt)]

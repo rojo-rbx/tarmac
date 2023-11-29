@@ -27,8 +27,8 @@ pub fn upload_image(global: GlobalOptions, options: UploadImageOptions) -> anyho
     let mut client = RobloxApiClient::new(RobloxCredentials {
         token: global.auth,
         api_key: global.api_key,
-        user_id: None,
-        group_id: None,
+        user_id: options.user_id,
+        group_id: options.group_id,
     })?;
 
     let upload_data = ImageUploadData {
