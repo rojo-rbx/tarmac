@@ -7,13 +7,13 @@ use fs_err as fs;
 use crate::asset_name::AssetName;
 use crate::data::Manifest;
 use crate::options::{CreateCacheMapOptions, GlobalOptions};
-use crate::roblox_web_api::{RobloxApiClient, RobloxCredentials};
+use crate::roblox_api::{get_preferred_client, RobloxCredentials};
 
 pub fn create_cache_map(
     global: GlobalOptions,
     options: CreateCacheMapOptions,
 ) -> anyhow::Result<()> {
-    let mut api_client = RobloxApiClient::new(RobloxCredentials {
+    let mut api_client = get_preferred_client(RobloxCredentials {
         token: global.auth,
         api_key: None,
         user_id: None,

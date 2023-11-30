@@ -7,7 +7,7 @@ use std::borrow::Cow;
 use crate::{
     alpha_bleed::alpha_bleed,
     options::{GlobalOptions, UploadImageOptions},
-    roblox_web_api::{ImageUploadData, RobloxApiClient, RobloxCredentials},
+    roblox_api::{get_preferred_client, ImageUploadData, RobloxCredentials},
 };
 
 pub fn upload_image(global: GlobalOptions, options: UploadImageOptions) -> anyhow::Result<()> {
@@ -24,7 +24,7 @@ pub fn upload_image(global: GlobalOptions, options: UploadImageOptions) -> anyho
         .encode(&img.to_bytes(), width, height, img.color())
         .unwrap();
 
-    let mut client = RobloxApiClient::new(RobloxCredentials {
+    let mut client = get_preferred_client(RobloxCredentials {
         token: global.auth,
         api_key: global.api_key,
         user_id: options.user_id,

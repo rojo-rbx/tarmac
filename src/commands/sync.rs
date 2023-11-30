@@ -22,7 +22,7 @@ use crate::{
     },
     dpi_scale,
     options::{GlobalOptions, SyncOptions, SyncTarget},
-    roblox_web_api::{RobloxApiClient, RobloxApiError, RobloxCredentials},
+    roblox_api::{get_preferred_client, RobloxApiClient, RobloxApiError, RobloxCredentials},
     sync_backend::{
         DebugSyncBackend, Error as SyncBackendError, LocalSyncBackend, NoneSyncBackend,
         RetryBackend, RobloxSyncBackend, SyncBackend, UploadInfo,
@@ -47,7 +47,7 @@ pub fn sync(global: GlobalOptions, options: SyncOptions) -> Result<(), SyncError
 
     let mut session = SyncSession::new(&fuzzy_config_path)?;
 
-    let mut api_client = RobloxApiClient::new(RobloxCredentials {
+    let mut api_client = get_preferred_client(RobloxCredentials {
         token: global.auth.or_else(get_auth_cookie),
         api_key: global.api_key,
         group_id: session.root_config().upload_to_group_id,
@@ -63,7 +63,7 @@ pub fn sync(global: GlobalOptions, options: SyncOptions) -> Result<(), SyncError
             sync_session(
                 &mut session,
                 &options,
-                RobloxSyncBackend::new(&mut api_client),
+                RobloxSyncBackend::new(api_client.as_mut()),
             );
         }
         SyncTarget::Local => {
@@ -84,7 +84,7 @@ pub fn sync(global: GlobalOptions, options: SyncOptions) -> Result<(), SyncError
     session.write_manifest()?;
     session.codegen()?;
     session.write_asset_list()?;
-    session.populate_asset_cache(&mut api_client)?;
+    session.populate_asset_cache(api_client.as_mut())?;
 
     if session.sync_errors.is_empty() {
         Ok(())
@@ -664,7 +664,7 @@ impl SyncSession {
         Ok(())
     }
 
-    fn populate_asset_cache(&self, api_client: &mut RobloxApiClient) -> Result<(), SyncError> {
+    fn populate_asset_cache(&self, api_client: &mut dyn RobloxApiClient) -> Result<(), SyncError> {
         let cache_path = match &self.root_config().asset_cache_path {
             Some(path) => path,
             None => return Ok(()),

@@ -8,7 +8,7 @@ mod dpi_scale;
 mod glob;
 mod lua_ast;
 mod options;
-mod roblox_web_api;
+mod roblox_api;
 mod sync_backend;
 
 use std::{env, panic, process};
