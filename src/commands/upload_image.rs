@@ -6,6 +6,7 @@ use std::borrow::Cow;
 
 use crate::{
     alpha_bleed::alpha_bleed,
+    auth_cookie::get_auth_cookie,
     options::{GlobalOptions, UploadImageOptions},
     roblox_api::{get_preferred_client, ImageUploadData, RobloxCredentials},
 };
@@ -25,7 +26,7 @@ pub fn upload_image(global: GlobalOptions, options: UploadImageOptions) -> anyho
         .unwrap();
 
     let mut client = get_preferred_client(RobloxCredentials {
-        token: global.auth,
+        token: global.auth.or_else(get_auth_cookie),
         api_key: global.api_key,
         user_id: options.user_id,
         group_id: options.group_id,
