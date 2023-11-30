@@ -184,6 +184,8 @@ tarmac help [<subcommand>]
 	* If defined, Tarmac will write a list of asset URLs used by the project to the given file. One URL is printed per line.
 * `upload-to-group-id`, int, **optional**
 	* If defined, Tarmac will attempt to upload all assets to the given Roblox Group. If unable, syncing will fail.
+* `upload-to-user-id`, int, **optional**
+	* If defined, Tarmac will attempt to upload assets to the given Roblox user. This option is required when using the Open Cloud API via `--api-key`, but has no effect when using cookie authentication.
 * `inputs`, list\<InputConfig\>, **optional**
 	* A list of inputs that Tarmac will process.
 * `includes`, list\<path\>, **optional**
