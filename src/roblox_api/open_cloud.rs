@@ -12,7 +12,10 @@ use reqwest::StatusCode;
 use secrecy::ExposeSecret;
 use tokio::runtime::Runtime;
 
-use super::{ImageUploadData, RobloxApiClient, RobloxApiError, RobloxCredentials, UploadResponse};
+use super::{
+    legacy::LegacyClient, ImageUploadData, RobloxApiClient, RobloxApiError, RobloxCredentials,
+    UploadResponse,
+};
 
 pub struct OpenCloudClient {
     credentials: RobloxCredentials,
@@ -68,8 +71,8 @@ impl RobloxApiClient for OpenCloudClient {
         self.upload_image_inner(data)
     }
 
-    fn download_image(&mut self, _id: u64) -> Result<Vec<u8>, RobloxApiError> {
-        unimplemented!()
+    fn download_image(&mut self, id: u64) -> Result<Vec<u8>, RobloxApiError> {
+        LegacyClient::new(self.credentials.clone())?.download_image(id)
     }
 }
 

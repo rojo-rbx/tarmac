@@ -25,7 +25,7 @@ pub struct UploadResponse {
     pub backing_asset_id: u64,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct RobloxCredentials {
     pub token: Option<SecretString>,
     pub api_key: Option<SecretString>,
