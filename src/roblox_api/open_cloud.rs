@@ -48,8 +48,6 @@ impl RobloxApiClient for OpenCloudClient {
         data: &ImageUploadData,
     ) -> Result<UploadResponse, RobloxApiError> {
         match self.upload_image(data) {
-            Ok(response) => Ok(response),
-
             Err(RobloxApiError::ResponseError { status, body })
                 if status == 400 && body.contains("moderated") =>
             {
@@ -63,7 +61,7 @@ impl RobloxApiClient for OpenCloudClient {
                 })
             }
 
-            Err(e) => Err(e),
+            result => result,
         }
     }
 
