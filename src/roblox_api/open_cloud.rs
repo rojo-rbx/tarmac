@@ -121,11 +121,11 @@ impl OpenCloudClient {
         const BACKOFF: u32 = 2;
 
         let mut retry_count = 0;
+        let operation = GetAsset { operation_id };
         let asset_id = loop {
-            let operation_id = operation_id.clone();
             let maybe_asset_id = self
                 .runtime
-                .block_on(async { assets.get(&GetAsset { operation_id }).await })
+                .block_on(async { assets.get(&operation).await })
                 .map_err(map_response_error)?
                 .response
                 .map(|response| response.asset_id)
