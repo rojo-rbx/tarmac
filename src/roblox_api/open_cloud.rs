@@ -6,7 +6,7 @@ use rbxcloud::rbx::{
         AssetUserCreator,
     },
     error::Error as RbxCloudError,
-    CreateAssetWithContents, GetAsset, RbxCloud,
+    CreateAssetWithContents, GetAsset, RbxAssets, RbxCloud,
 };
 use reqwest::StatusCode;
 use secrecy::ExposeSecret;
@@ -20,6 +20,7 @@ use super::{
 pub struct OpenCloudClient {
     credentials: RobloxCredentials,
     creator: AssetCreator,
+    assets: RbxAssets,
     runtime: Runtime,
 }
 
@@ -36,8 +37,18 @@ impl RobloxApiClient for OpenCloudClient {
             (Some(_), Some(_)) => Err(RobloxApiError::AmbiguousCreatorType),
         }?;
 
+        let assets = RbxCloud::new(
+            credentials
+                .api_key
+                .as_ref()
+                .ok_or(RobloxApiError::MissingAuth)?
+                .expose_secret(),
+        )
+        .assets();
+
         Ok(Self {
             creator,
+            assets,
             credentials,
             runtime: Runtime::new().unwrap(),
         })
@@ -76,15 +87,6 @@ impl RobloxApiClient for OpenCloudClient {
 
 impl OpenCloudClient {
     fn upload_image_inner(&self, data: &ImageUploadData) -> Result<UploadResponse, RobloxApiError> {
-        let assets = RbxCloud::new(
-            self.credentials
-                .api_key
-                .as_ref()
-                .ok_or(RobloxApiError::MissingAuth)?
-                .expose_secret(),
-        )
-        .assets();
-
         let map_response_error = |e| match e {
             RbxCloudError::HttpStatusError { code, msg } => RobloxApiError::ResponseError {
                 status: StatusCode::from_u16(code).unwrap_or_default(),
@@ -108,7 +110,7 @@ impl OpenCloudClient {
 
         let operation_id = self
             .runtime
-            .block_on(async { assets.create_with_contents(&asset_info).await })
+            .block_on(async { self.assets.create_with_contents(&asset_info).await })
             .map_err(map_response_error)
             .map(|response| response.path)?
             .ok_or(RobloxApiError::MissingOperationPath)?
@@ -125,7 +127,7 @@ impl OpenCloudClient {
         let asset_id = loop {
             let maybe_asset_id = self
                 .runtime
-                .block_on(async { assets.get(&operation).await })
+                .block_on(async { self.assets.get(&operation).await })
                 .map_err(map_response_error)?
                 .response
                 .map(|response| response.asset_id)
