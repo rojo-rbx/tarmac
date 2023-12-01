@@ -90,7 +90,7 @@ pub enum RobloxApiError {
     MalformedOperationPath,
 
     #[error("Open Cloud API error")]
-    RbxCloud(#[from] RbxCloudError),
+    RbxCloud(RbxCloudError),
 
     #[error("Failed to parse asset ID from asset get response")]
     MalformedAssetId(#[from] std::num::ParseIntError),

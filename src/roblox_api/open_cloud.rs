@@ -87,14 +87,6 @@ impl RobloxApiClient for OpenCloudClient {
 
 impl OpenCloudClient {
     fn upload_image_inner(&self, data: &ImageUploadData) -> Result<UploadResponse, RobloxApiError> {
-        let map_response_error = |e| match e {
-            RbxCloudError::HttpStatusError { code, msg } => RobloxApiError::ResponseError {
-                status: StatusCode::from_u16(code).unwrap_or_default(),
-                body: msg,
-            },
-            _ => RobloxApiError::RbxCloud(e),
-        };
-
         let asset_info = CreateAssetWithContents {
             asset: AssetCreation {
                 asset_type: AssetType::DecalPng,
@@ -111,7 +103,6 @@ impl OpenCloudClient {
         let operation_id = self
             .runtime
             .block_on(async { self.assets.create_with_contents(&asset_info).await })
-            .map_err(map_response_error)
             .map(|response| response.path)?
             .ok_or(RobloxApiError::MissingOperationPath)?
             .strip_prefix("operations/")
@@ -127,8 +118,7 @@ impl OpenCloudClient {
         let asset_id = loop {
             let maybe_asset_id = self
                 .runtime
-                .block_on(async { self.assets.get(&operation).await })
-                .map_err(map_response_error)?
+                .block_on(async { self.assets.get(&operation).await })?
                 .response
                 .map(|response| response.asset_id)
                 .map(|id| id.parse::<u64>().map_err(RobloxApiError::MalformedAssetId));
@@ -148,5 +138,17 @@ impl OpenCloudClient {
             asset_id,
             backing_asset_id: asset_id,
         })
+    }
+}
+
+impl From<RbxCloudError> for RobloxApiError {
+    fn from(value: RbxCloudError) -> Self {
+        match value {
+            RbxCloudError::HttpStatusError { code, msg } => RobloxApiError::ResponseError {
+                status: StatusCode::from_u16(code).unwrap_or_default(),
+                body: msg,
+            },
+            _ => RobloxApiError::RbxCloud(value),
+        }
     }
 }
