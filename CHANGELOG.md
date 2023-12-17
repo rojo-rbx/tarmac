@@ -1,7 +1,7 @@
 # Tarmac Changelog
 
 ## Unreleased Changes
-* Added `spritesheet-padding-size` to root config ([#8](https://github.com/rojo-rbx/tarmac/pull/8))
+* Added `spritesheet-padding-size` to root config ([#11](https://github.com/rojo-rbx/tarmac/pull/11))
 
 ## 0.7.1 (2020-12-14)
 * Added alpha-bleeding of unpacked images ([#2](https://github.com/jeparlefrancais/tarmac/pull/2))
