@@ -428,7 +428,7 @@ impl SyncSession {
 
         let packer = SimplePacker::new()
             .max_size(self.root_config().max_spritesheet_size)
-            .padding(1);
+            .padding(self.root_config().spritesheet_padding_size);
 
         let pack_results = packer.pack(packos_inputs);
         let mut packed_images = Vec::new();
