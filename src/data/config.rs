@@ -26,7 +26,7 @@ pub struct Config {
     #[serde(default = "default_max_spritesheet_size")]
     pub max_spritesheet_size: (u32, u32),
 
-	/// The padding size that any packed spritesheets should use. Only applies if
+    /// The padding size that any packed spritesheets should use. Only applies if
     /// this config is the root config file.
     #[serde(default = "default_spritesheet_padding_size")]
     pub spritesheet_padding_size: u32,
