@@ -5,15 +5,21 @@ use std::io::{BufWriter, Write};
 use fs_err as fs;
 
 use crate::asset_name::AssetName;
+use crate::auth_cookie::get_auth_cookie;
 use crate::data::Manifest;
 use crate::options::{CreateCacheMapOptions, GlobalOptions};
-use crate::roblox_web_api::RobloxApiClient;
+use crate::roblox_api::{get_preferred_client, RobloxCredentials};
 
 pub fn create_cache_map(
     global: GlobalOptions,
     options: CreateCacheMapOptions,
 ) -> anyhow::Result<()> {
-    let mut api_client = RobloxApiClient::new(global.auth);
+    let mut api_client = get_preferred_client(RobloxCredentials {
+        token: global.auth.or_else(get_auth_cookie),
+        api_key: None,
+        user_id: None,
+        group_id: None,
+    })?;
 
     let project_path = match options.project_path {
         Some(path) => path,

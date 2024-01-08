@@ -44,6 +44,10 @@ pub struct Config {
     /// not have access to create assets on the group.
     pub upload_to_group_id: Option<u64>,
 
+    /// Upload to the given user. This field only has effect when using the Open
+    /// Cloud API.
+    pub upload_to_user_id: Option<u64>,
+
     /// A list of paths that Tarmac should search in to find other Tarmac
     /// projects.
     ///

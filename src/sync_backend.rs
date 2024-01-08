@@ -11,8 +11,10 @@ use reqwest::StatusCode;
 use roblox_install::RobloxStudio;
 use thiserror::Error;
 
-use crate::data::AssetId;
-use crate::roblox_web_api::{ImageUploadData, RobloxApiClient, RobloxApiError};
+use crate::{
+    data::AssetId,
+    roblox_api::{ImageUploadData, RobloxApiClient, RobloxApiError},
+};
 
 pub trait SyncBackend {
     fn upload(&mut self, data: UploadInfo) -> Result<UploadResponse, Error>;
@@ -31,16 +33,12 @@ pub struct UploadInfo {
 }
 
 pub struct RobloxSyncBackend<'a> {
-    api_client: &'a mut RobloxApiClient,
-    upload_to_group_id: Option<u64>,
+    api_client: &'a mut dyn RobloxApiClient,
 }
 
 impl<'a> RobloxSyncBackend<'a> {
-    pub fn new(api_client: &'a mut RobloxApiClient, upload_to_group_id: Option<u64>) -> Self {
-        Self {
-            api_client,
-            upload_to_group_id,
-        }
+    pub fn new(api_client: &'a mut dyn RobloxApiClient) -> Self {
+        Self { api_client }
     }
 }
 
@@ -50,11 +48,10 @@ impl<'a> SyncBackend for RobloxSyncBackend<'a> {
 
         let result = self
             .api_client
-            .upload_image_with_moderation_retry(ImageUploadData {
+            .upload_image_with_moderation_retry(&ImageUploadData {
                 image_data: Cow::Owned(data.contents),
                 name: &data.name,
                 description: "Uploaded by Tarmac.",
-                group_id: self.upload_to_group_id,
             });
 
         match result {

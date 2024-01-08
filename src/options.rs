@@ -21,6 +21,9 @@ pub struct GlobalOptions {
     #[structopt(long, global(true))]
     pub auth: Option<SecretString>,
 
+    #[structopt(long, global(true), env = "TARMAC_API_KEY", hide_env_values = true)]
+    pub api_key: Option<SecretString>,
+
     /// Sets verbosity level. Can be specified multiple times.
     #[structopt(long = "verbose", short, global(true), parse(from_occurrences))]
     pub verbosity: u8,
@@ -36,7 +39,8 @@ pub enum Subcommand {
     Sync(SyncOptions),
 
     /// Downloads any packed spritesheets, then generates a file mapping asset
-    /// IDs to file paths.
+    /// IDs to file paths. This command only works when logged into Roblox
+    /// Studio or when a .ROBLOSECURITY token is passed via --auth.
     CreateCacheMap(CreateCacheMapOptions),
 
     /// Creates a file that lists all assets required by the project.
@@ -55,6 +59,15 @@ pub struct UploadImageOptions {
     /// The description to give to the resulting Decal asset.
     #[structopt(long, default_value = "Uploaded by Tarmac.")]
     pub description: String,
+
+    /// The ID of the user to upload to. This option only has effect when using
+    /// an API key.
+    #[structopt(long)]
+    pub user_id: Option<u64>,
+
+    /// The ID of the group to upload to.
+    #[structopt(long)]
+    pub group_id: Option<u64>,
 }
 
 #[derive(Debug, StructOpt)]

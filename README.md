@@ -54,7 +54,11 @@ codegen-path = "src/assets.lua"
 codegen-base-path = "assets"
 ```
 
-Run `tarmac sync --target roblox` to have Tarmac upload any new or updated assets that your project depends on. You may need to pass a `.ROBLOSECURITY` cookie explicitly via the `--auth` argument.
+Run `tarmac sync --target roblox` to have Tarmac upload any new or updated assets that your project depends on.
+
+To use Roblox Open Cloud, provide a valid [API key with asset read and write permissions](https://create.roblox.com/docs/cloud/open-cloud/api-keys) to the `--api-key` option (or store it in an environment variable called `TARMAC_API_KEY`), and specify the user or group ID the API key belongs to in `upload-to-user-id` or `upload-to-group-id` in your project.
+
+Otherwise, you may need to pass a `.ROBLOSECURITY` cookie explicitly via the `--auth` argument.
 
 Tarmac will generate Lua code in `src/assets.lua` that looks something like this:
 
@@ -87,6 +91,9 @@ These options can be specified alongside any subcommands and are all optional.
 	* Prints help information about Tarmac and exits.
 * `--version`, `-V`
 	* Prints version information about Tarmac and exits.
+* `--api-key <key>`
+	* Defines the API key Tarmac will use to authenticate with Open Cloud.
+	* If not specified, Tarmac will attempt to read a key from the `TARMAC_API_KEY` environment variable, or else fall back to the cookie authentication method.
 * `--auth <cookie>`
 	* Explicitly defines the authentication cookie Tarmac should use to communicate with Roblox.
 	* If not specified, Tarmac will attempt to locate one from the local system.
@@ -186,6 +193,8 @@ tarmac help [<subcommand>]
 	* If defined, Tarmac will write a list of asset URLs used by the project to the given file. One URL is printed per line.
 * `upload-to-group-id`, int, **optional**
 	* If defined, Tarmac will attempt to upload all assets to the given Roblox Group. If unable, syncing will fail.
+* `upload-to-user-id`, int, **optional**
+	* If defined, Tarmac will attempt to upload assets to the given Roblox user. This option is required when using the Open Cloud API via `--api-key`, but has no effect when using cookie authentication.
 * `inputs`, list\<InputConfig\>, **optional**
 	* A list of inputs that Tarmac will process.
 * `includes`, list\<path\>, **optional**
