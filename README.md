@@ -178,6 +178,8 @@ tarmac help [<subcommand>]
 	* The name of the Tarmac project, used in logging and error reporting.
 * `max-spritesheet-size`, (int, int), **optional**
 	* The maximum spritesheet size that Tarmac should use. Defaults to **(1024, 1024)**, the maximum image size supported by Roblox.
+* `spritesheet-padding-size`, int, **optional**
+	* The pixel padding between images packed into a spritesheet that Tarmac should use. Defaults to **1**.
 * `asset-cache-path`, path, **optional**
 	* If defined, Tarmac will re-download uploaded images to a local folder at the given path. Files in this folder not associated with assets in the project will be deleted.
 * `asset-list-path`, path, **optional**
