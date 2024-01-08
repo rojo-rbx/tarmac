@@ -392,6 +392,12 @@ impl SyncSession {
         for name in group {
             if let Some(manifest) = self.original_manifest.inputs.get(name) {
                 let input = &self.inputs[name];
+
+                // If a sprite is local, it should be resynced just in case we decide to publish using roblox later...
+                if input.id.is_none() {
+                    return false;
+                }
+
                 let unchanged = input.is_unchanged_since_last_sync(manifest);
 
                 if !unchanged {
