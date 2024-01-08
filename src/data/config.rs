@@ -162,6 +162,10 @@ pub struct InputConfig {
     /// instances.
     #[serde(default)]
     pub packable: bool,
+
+    /// Generate a .d.ts file alongside the codegen (for roblox-ts users)
+    #[serde(default)]
+    pub codegen_typescript_declaration: bool,
 }
 
 #[derive(Debug, Error)]

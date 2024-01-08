@@ -10,6 +10,7 @@ packable = true
 codegen = true
 codegen-path = "pack-these/init.lua"
 codegen-base-path = "pack-these"
+codegen-typescript-declaration = true
 
 [[inputs]]
 glob = "dont-pack-these/**/*.png"

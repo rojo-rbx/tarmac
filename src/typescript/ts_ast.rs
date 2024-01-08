@@ -37,6 +37,14 @@ pub(crate) struct FunctionType {
     parameters: Vec<Parameter>,
     return_type: Box<Expression>,
 }
+impl FunctionType {
+    pub fn new(parameters: Vec<Parameter>, return_type: Expression) -> FunctionType {
+        FunctionType {
+            parameters,
+            return_type: Box::new(return_type),
+        }
+    }
+}
 impl FmtTS for FunctionType {
     fn fmt_ts(&self, output: &mut TSStream) -> fmt::Result {
         write!(output, "(")?;
@@ -56,6 +64,15 @@ pub(crate) struct PropertySignature {
     modifiers: Option<Vec<ModifierToken>>,
     expression: Expression,
 }
+impl PropertySignature {
+    pub fn new(name: String, modifiers: Option<Vec<ModifierToken>>, expression: Expression) -> PropertySignature {
+        PropertySignature {
+            name,
+            modifiers,
+            expression,
+        }
+    }
+}
 impl FmtTS for PropertySignature {
     fn fmt_ts(&self, output: &mut TSStream) -> fmt::Result {
         if let Some(modifiers) = &self.modifiers {
@@ -63,30 +80,83 @@ impl FmtTS for PropertySignature {
                 write!(output, "{} ", modifier.as_str())?;
             }
         }
-        writeln!(output, "{}: {};", self.name, self.expression)
+
+        if self.name.chars().all(char::is_alphanumeric) && self.name.chars().nth(0).unwrap().is_alphabetic() {
+            writeln!(output, "{}: {};", self.name, self.expression)
+        } else {
+            writeln!(output, "[\"{}\"]: {};", self.name, self.expression)
+        }
+    }
+}
+
+pub(crate) enum TypeReference {
+    Expression(Expression),
+    Union(Vec<TypeReference>),
+}
+impl FmtTS for TypeReference {
+    fn fmt_ts(&self, output: &mut TSStream) -> fmt::Result {
+        match self {
+            TypeReference::Expression(inner) => {
+                write!(output, "{}", inner)?;
+            },
+            TypeReference::Union(types) => {
+                let count = types.len();
+                let mut iter = 0;
+
+                for parameter in types {
+                    iter += 1;
+                    
+                    parameter.fmt_ts(output)?;
+        
+                    if iter < count {
+                        write!(output, " | ")?;
+                    }
+                }
+            },
+        }
+
+        Ok(())
+    }
+}
+impl TypeReference {
+    pub fn id(id: String) -> TypeReference {
+        TypeReference::Expression(Expression::Identifier(id))
+    }
+
+    pub fn num(value: i32) -> TypeReference {
+        TypeReference::Expression(Expression::NumericLiteral(value))
+    }
+
+    pub fn union(inner: Vec<TypeReference>) -> TypeReference {
+        TypeReference::Union(inner)
     }
 }
 
 pub(crate) struct Parameter {
     name: String,
-    // modifiers: Option<Vec<ModifierToken>>,
-    expression: Expression,
+    param_type: TypeReference,
 }
+
+impl Parameter {
+    pub fn new(name: String, param_type: TypeReference) -> Parameter {
+        Parameter {
+            name,
+            param_type,
+        }
+    }
+}
+
 impl FmtTS for Vec<Parameter> {
     fn fmt_ts(&self, output: &mut TSStream) -> fmt::Result {
         let count = self.len();
         let mut iter = 0;
 
         for parameter in self {
-            // if let Some(modifiers) = &parameter.modifiers {
-            //     for modifier in modifiers {
-            //         write!(output, "{} ", modifier.as_str())?;
-            //     }
-            // }
-
             iter += 1;
 
-            write!(output, "{}: {}", parameter.name, parameter.expression)?;
+            write!(output, "{}: ", parameter.name)?;
+            parameter.param_type.fmt_ts(output)?;
+
             if iter < count {
                 write!(output, ", ")?;
             }
@@ -147,6 +217,19 @@ pub(crate) struct InterfaceDeclaration {
     modifiers: Option<Vec<ModifierToken>>,
     members: Vec<PropertySignature>,
 }
+impl InterfaceDeclaration {
+    pub fn new(
+        name: String,
+        modifiers: Option<Vec<ModifierToken>>,
+        members: Vec<PropertySignature>,
+    ) -> InterfaceDeclaration {
+        InterfaceDeclaration {
+            name,
+            modifiers,
+            members,
+        }
+    }
+}
 impl FmtTS for InterfaceDeclaration {
     fn fmt_ts(&self, output: &mut TSStream) -> fmt::Result {
         if let Some(mod_tokens) = &self.modifiers {
@@ -170,6 +253,7 @@ impl FmtTS for InterfaceDeclaration {
 pub(crate) enum Expression {
     Identifier(String),
     StringLiteral(String),
+    NumericLiteral(i32),
     TypeLiteral(Vec<PropertySignature>),
     FunctionType(FunctionType),
 }
@@ -181,6 +265,9 @@ impl FmtTS for Expression {
             }
             Self::StringLiteral(literal) => {
                 write!(output, "\"{}\"", literal)
+            }
+            Self::NumericLiteral(literal) => {
+                write!(output, "{}", literal)
             }
             Self::TypeLiteral(literal) => {
                 writeln!(output, "{{")?;
@@ -204,6 +291,12 @@ pub(crate) enum Statement {
     InterfaceDeclaration(InterfaceDeclaration),
     VariableDeclaration(VariableDeclaration),
     ExportAssignment(ExportAssignment),
+}
+
+impl Statement {
+    pub fn export_assignment(expression: Expression) -> Statement {
+        Statement::ExportAssignment(ExportAssignment { expression })
+    }
 }
 
 impl FmtTS for Statement {
@@ -272,102 +365,5 @@ impl fmt::Write for TSStream<'_> {
         }
 
         Ok(())
-    }
-}
-
-mod test {
-    use super::*;
-
-    #[test]
-    fn test() {
-        println!(
-            "{}",
-            Statement::InterfaceDeclaration(InterfaceDeclaration {
-                name: "Sprite".into(),
-                modifiers: None,
-                members: vec![
-                    PropertySignature {
-                        name: "Image".into(),
-                        modifiers: Some(vec![ModifierToken::Readonly]),
-                        expression: Expression::Identifier("string".into())
-                    },
-                    PropertySignature {
-                        name: "ImageRectOffset".into(),
-                        modifiers: Some(vec![ModifierToken::Readonly]),
-                        expression: Expression::Identifier("Vector2".into())
-                    },
-                    PropertySignature {
-                        name: "ImageRectSize".into(),
-                        modifiers: Some(vec![ModifierToken::Readonly]),
-                        expression: Expression::Identifier("Vector2".into())
-                    }
-                ]
-            })
-        );
-
-        println!(
-            "{}",
-            Statement::InterfaceDeclaration(InterfaceDeclaration {
-                name: "Assets".into(),
-                modifiers: Some(vec![ModifierToken::Declare]),
-                members: vec![
-                    PropertySignature {
-                        name: "AssetName1".into(),
-                        modifiers: Some(vec![ModifierToken::Readonly]),
-                        expression: Expression::Identifier("Sprite".into())
-                    },
-                    PropertySignature {
-                        name: "AssetName2".into(),
-                        modifiers: Some(vec![ModifierToken::Readonly]),
-                        expression: Expression::TypeLiteral(vec![
-                            PropertySignature {
-                                name: "Image".into(),
-                                modifiers: Some(vec![ModifierToken::Readonly]),
-                                expression: Expression::Identifier("string".into())
-                            },
-                            PropertySignature {
-                                name: "ImageRectOffset".into(),
-                                modifiers: Some(vec![ModifierToken::Readonly]),
-                                expression: Expression::Identifier("Vector2".into())
-                            },
-                            PropertySignature {
-                                name: "ImageRectSize".into(),
-                                modifiers: Some(vec![ModifierToken::Readonly]),
-                                expression: Expression::Identifier("Vector2".into())
-                            }
-                        ])
-                    },
-                    PropertySignature {
-                        name: "FunctionTypedAsset".into(),
-                        modifiers: Some(vec![ModifierToken::Readonly]),
-                        expression: Expression::FunctionType(FunctionType {
-                            parameters: vec![Parameter {
-                                name: "dpiScale".into(),
-                                expression: Expression::Identifier("number".into())
-                            }],
-                            return_type: Box::new(Expression::Identifier("test".into()))
-                        })
-                    }
-                ]
-            })
-        );
-
-        println!(
-            "{}",
-            Statement::VariableDeclaration(VariableDeclaration {
-                name: "Assets".into(),
-                kind: VariableKind::Const,
-                type_expression: Some(Expression::Identifier("Assets".into())),
-                modifiers: Some(vec![ModifierToken::Declare]),
-                expression: Some(Expression::Identifier("Assets".into()))
-            })
-        );
-
-        println!(
-            "{}",
-            Statement::ExportAssignment(ExportAssignment {
-                expression: Expression::Identifier("Assets".into())
-            })
-        );
     }
 }

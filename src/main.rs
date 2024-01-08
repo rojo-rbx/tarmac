@@ -1,16 +1,16 @@
 mod alpha_bleed;
 mod asset_name;
 mod auth_cookie;
-mod codegen;
 mod commands;
 mod data;
 mod dpi_scale;
 mod glob;
-mod lua_ast;
 mod options;
 mod roblox_web_api;
 mod sync_backend;
-mod ts_ast;
+mod lua;
+mod typescript;
+mod codegen;
 
 use std::{env, panic, process};
 
