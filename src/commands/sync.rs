@@ -111,6 +111,9 @@ struct SyncSession {
 
     /// Errors encountered during syncing that we ignored at the time.
     sync_errors: Vec<anyhow::Error>,
+
+    /// The current sprite's index. Used for `local` to use different file names for each sprite that's used.
+    current_sprite_index: u32,
 }
 
 /// Contains information to help Tarmac batch process different kinds of assets.
@@ -122,6 +125,7 @@ struct InputKind {
 
 struct PackedImage {
     img: DynamicImage,
+    index: u32,
     slices: HashMap<AssetName, ImageSlice>,
 }
 
@@ -144,6 +148,7 @@ impl SyncSession {
             original_manifest,
             inputs: BTreeMap::new(),
             sync_errors: Vec::new(),
+            current_sprite_index: 1,
         })
     }
 
@@ -256,7 +261,7 @@ impl SyncSession {
                 for matching in filtered_paths {
                     let path = matching.into_path();
 
-                    let name = AssetName::from_paths(&root_config_path, &path);
+                    let name = AssetName::from_paths(root_config_path, &path);
                     log::trace!("Found input {}", name);
 
                     let path_info = dpi_scale::extract_path_info(&path);
@@ -387,6 +392,12 @@ impl SyncSession {
         for name in group {
             if let Some(manifest) = self.original_manifest.inputs.get(name) {
                 let input = &self.inputs[name];
+
+                // If a sprite is local, it should be resynced just in case we decide to publish using roblox later...
+                if input.id.is_none() {
+                    return false;
+                }
+
                 let unchanged = input.is_unchanged_since_last_sync(manifest);
 
                 if !unchanged {
@@ -407,12 +418,12 @@ impl SyncSession {
         true
     }
 
-    fn pack_images(&self, group: &[AssetName]) -> Result<Vec<PackedImage>, SyncError> {
+    fn pack_images(&mut self, group: &[AssetName]) -> Result<Vec<PackedImage>, SyncError> {
         let mut packos_inputs = Vec::new();
         let mut images_by_id = HashMap::new();
 
         for name in group {
-            let input = &self.inputs[&name];
+            let input = &self.inputs[name];
             let img = image::load_from_memory(input.contents.as_slice())?;
 
             let input = InputItem::new(img.dimensions());
@@ -423,7 +434,7 @@ impl SyncSession {
 
         let packer = SimplePacker::new()
             .max_size(self.root_config().max_spritesheet_size)
-            .padding(1);
+            .padding(self.root_config().spritesheet_padding_size);
 
         let pack_results = packer.pack(packos_inputs);
         let mut packed_images = Vec::new();
@@ -443,7 +454,12 @@ impl SyncSession {
                 slices.insert((*name).clone(), slice);
             }
 
-            packed_images.push(PackedImage { img, slices });
+            packed_images.push(PackedImage {
+                img,
+                slices,
+                index: self.current_sprite_index,
+            });
+            self.current_sprite_index += 1;
         }
 
         Ok(packed_images)
@@ -470,7 +486,7 @@ impl SyncSession {
         let hash = generate_asset_hash(&encoded_image);
 
         let upload_data = UploadInfo {
-            name: "spritesheet".to_owned(),
+            name: format!("spritesheet-{}", packed_image.index),
             contents: encoded_image,
             hash,
         };
@@ -512,7 +528,7 @@ impl SyncSession {
             hash: input.hash.clone(),
         };
 
-        let id = if let Some(input_manifest) = self.original_manifest.inputs.get(&input_name) {
+        let id = if let Some(input_manifest) = self.original_manifest.inputs.get(input_name) {
             // This input existed during our last sync operation. We'll compare
             // the current state with the previous one to see if we need to take
             // action.
@@ -603,11 +619,7 @@ impl SyncSession {
         let mut compatible_codegen_groups = HashMap::new();
 
         for (input_name, input) in &self.inputs {
-            let output_path = input
-                .config
-                .codegen_path
-                .as_ref()
-                .map(|path| path.as_path());
+            let output_path = input.config.codegen_path.as_deref();
 
             let compat = CodegenCompatibility { output_path };
 
@@ -647,7 +659,7 @@ impl SyncSession {
             .collect();
 
         for id in known_ids {
-            writeln!(file, "{}", id.to_string())?;
+            writeln!(file, "{}", id)?;
         }
 
         file.flush()?;

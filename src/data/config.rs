@@ -15,7 +15,7 @@ static CONFIG_FILENAME: &str = "tarmac.toml";
 ///
 /// Tarmac is started from a top-level tarmac.toml file. Config files can
 /// include other config files.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct Config {
     /// The name of the project, currently only used in debugging.
@@ -25,6 +25,11 @@ pub struct Config {
     /// this config is the root config file.
     #[serde(default = "default_max_spritesheet_size")]
     pub max_spritesheet_size: (u32, u32),
+
+    /// The padding size that any packed spritesheets should use. Only applies if
+    /// this config is the root config file.
+    #[serde(default = "default_spritesheet_padding_size")]
+    pub spritesheet_padding_size: u32,
 
     /// A path to a folder where any assets contained in the project should be
     /// stored. Each asset's name will match its asset ID.
@@ -124,8 +129,11 @@ impl Config {
 fn default_max_spritesheet_size() -> (u32, u32) {
     (1024, 1024)
 }
+fn default_spritesheet_padding_size() -> u32 {
+    1
+}
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct InputConfig {
     /// A glob that will match all files that should be considered for this

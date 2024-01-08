@@ -7,8 +7,11 @@ use reqwest::{
     header::{HeaderValue, COOKIE},
     Client, Request, Response, StatusCode,
 };
+use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+use crate::auth_cookie::get_csrf_token;
 
 #[derive(Debug, Clone)]
 pub struct ImageUploadData<'a> {
@@ -37,7 +40,7 @@ struct RawUploadResponse {
 }
 
 pub struct RobloxApiClient {
-    auth_token: Option<String>,
+    auth_token: Option<SecretString>,
     csrf_token: Option<HeaderValue>,
     client: Client,
 }
@@ -49,11 +52,28 @@ impl fmt::Debug for RobloxApiClient {
 }
 
 impl RobloxApiClient {
-    pub fn new(auth_token: Option<String>) -> Self {
-        Self {
-            auth_token,
-            csrf_token: None,
-            client: Client::new(),
+    pub fn new(auth_token: Option<SecretString>) -> Self {
+        match auth_token {
+            Some(token) => {
+                let csrf_token = match get_csrf_token(&token) {
+                    Ok(value) => Some(value),
+                    Err(err) => {
+                        log::error!("Was unable to fetch CSRF token: {}", err.to_string());
+                        None
+                    }
+                };
+
+                Self {
+                    auth_token: Some(token),
+                    csrf_token,
+                    client: Client::new(),
+                }
+            }
+            _ => Self {
+                auth_token,
+                csrf_token: None,
+                client: Client::new(),
+            },
         }
     }
 
@@ -213,7 +233,7 @@ impl RobloxApiClient {
     /// Roblox API, like authentication and CSRF protection.
     fn attach_headers(&self, request: &mut Request) {
         if let Some(auth_token) = &self.auth_token {
-            let cookie_value = format!(".ROBLOSECURITY={}", auth_token);
+            let cookie_value = format!(".ROBLOSECURITY={}", auth_token.expose_secret());
 
             request.headers_mut().insert(
                 COOKIE,
@@ -246,4 +266,7 @@ pub enum RobloxApiError {
 
     #[error("Roblox API returned HTTP {status} with body: {body}")]
     ResponseError { status: StatusCode, body: String },
+
+    #[error("Request for CSRF token did not return an X-CSRF-Token header.")]
+    MissingCsrfToken,
 }
