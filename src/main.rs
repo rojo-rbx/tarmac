@@ -6,10 +6,11 @@ mod commands;
 mod data;
 mod dpi_scale;
 mod glob;
-mod lua_ast;
+mod lua;
 mod options;
 mod roblox_web_api;
 mod sync_backend;
+mod typescript;
 
 use std::{env, panic, process};
 

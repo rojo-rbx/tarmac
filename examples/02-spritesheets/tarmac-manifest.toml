@@ -5,72 +5,70 @@ packable = false
 
 [inputs."pack-these/H.png"]
 hash = "643b283ec09f9ef9237c697ff2eaa57e2ff7520d8d05af0ba9131ce49fdf8d15"
-id = 6529931885
 slice = [[0, 0], [512, 512]]
 packable = true
 
 [inputs."pack-these/I.png"]
 hash = "8b45e473c554ab176bf983ff6169ab7777f1ba4901293f16619b9b91e801c5f0"
-id = 6529931979
 slice = [[0, 0], [512, 512]]
 packable = true
 
 [inputs."pack-these/J.png"]
 hash = "4d9997675cb7bfd11b911fb039e6b0ba0fd25f84f8ebbfa6efebb7475c5b8ee1"
-id = 6529931885
 slice = [[513, 0], [1018, 505]]
 packable = true
 
 [inputs."pack-these/K.png"]
 hash = "5903580d378c80727c7ebbaaac3e76c6906e433e3863229d76be43b4ac0ee83b"
-id = 6529931885
 slice = [[0, 513], [505, 1018]]
 packable = true
 
 [inputs."pack-these/L.png"]
 hash = "c7b6fc670f4621f775d8bffebaf560c416da27b9d870d245dcdd33039b767538"
-id = 6529931885
 slice = [[513, 506], [1018, 1011]]
+packable = true
+
+[inputs."pack-these/TestDpi/L@1x.png"]
+hash = "c7b6fc670f4621f775d8bffebaf560c416da27b9d870d245dcdd33039b767538"
+slice = [[513, 0], [1018, 505]]
+packable = true
+
+[inputs."pack-these/TestDpi/L@2x.png"]
+hash = "c7b6fc670f4621f775d8bffebaf560c416da27b9d870d245dcdd33039b767538"
+slice = [[0, 0], [505, 505]]
 packable = true
 
 [inputs."pack-these/a.png"]
 hash = "1944eaf325952605de9bfd06d8455bfea6dcbe9111e838d86ca9c619924d10bc"
-id = 6529931979
-slice = [[513, 0], [641, 128]]
+slice = [[0, 513], [128, 641]]
 packable = true
 
 [inputs."pack-these/b.png"]
 hash = "4ef1b9163f054aff8afa0b609dc300873ddb282a41bf18495ec55b792a4bc024"
-id = 6529931979
-slice = [[0, 513], [128, 641]]
+slice = [[513, 506], [641, 634]]
 packable = true
 
 [inputs."pack-these/c.png"]
 hash = "6cbc877353dc1ca4b3c5aec683e0a117e3c76e78bf230c5193a3c71b44dd83b2"
-id = 6529931979
-slice = [[642, 0], [770, 128]]
+slice = [[129, 513], [257, 641]]
 packable = true
 
 [inputs."pack-these/d.png"]
 hash = "7035a8cb15e325e4d1081cd81178b44f2e30dadc29696966fa7b95254bdc914b"
-id = 6529931979
-slice = [[513, 129], [641, 257]]
+slice = [[0, 642], [128, 770]]
 packable = true
 
 [inputs."pack-these/e.png"]
 hash = "a6a4d7869f3ec32b94cce8f4c2662827801629bb41e0350367638d8266f1c1f7"
-id = 6529931979
-slice = [[129, 513], [257, 641]]
+slice = [[642, 506], [770, 634]]
 packable = true
 
 [inputs."pack-these/f.png"]
 hash = "faae7bd7052c523477a815d007316abe73f46f1b1d4b8ba1c1b4d3907f8aaa90"
-id = 6529931979
-slice = [[0, 642], [128, 770]]
+slice = [[513, 635], [641, 763]]
 packable = true
 
 [inputs."pack-these/g.png"]
 hash = "3845d305bcbc0b4444790c76840ad5de8e138f63cd563dd26dee894a2f8fa440"
-id = 6529931979
-slice = [[771, 0], [899, 128]]
+slice = [[258, 513], [386, 641]]
 packable = true

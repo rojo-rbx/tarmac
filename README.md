@@ -193,6 +193,9 @@ tarmac help [<subcommand>]
 	* When a `tarmac.toml` file is found, Tarmac will include it and its includes and stop traversing that directory.
 
 ### InputConfig
+* `name`, string, **optional**
+	* The name of the input
+	* Used for the TypeScript interface name (if `codegen-typescript-declaration` is specified - otherwise generated TS code will use **TarmacAssets**)
 * `glob`, string
 	* A path glob that should include any files for this input group.
 	* Tarmac uses the [globset library](https://docs.rs/globset/0.4.5/globset/) and supports any syntax it supports.
@@ -202,6 +205,8 @@ tarmac help [<subcommand>]
 	* If defined and `codegen` is true, Tarmac will merge all generated Lua code for this input group into a single file.
 * `codegen-base-path`, path, **optional**
 	* Defines the base path for generating Lua code when `codegen-path` is also defined. Defaults to **the directory containing `tarmac.toml`**.
+* `codegen-typescript-declaration`, bool, **optional**
+	* Will generate a corresponding `.d.ts` file alongside the generated Lua file if true. Defaults to **false**.
 
 ## License
 Tarmac is available under the MIT license. See [LICENSE.txt](LICENSE.txt) for details.

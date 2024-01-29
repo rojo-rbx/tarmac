@@ -1,6 +1,7 @@
 name = "02-spritesheets"
 
 [[inputs]]
+name = "PackedSprites"
 glob = "pack-these/**/*.png"
 
 # Set packable to true to tell Tarmac that we're okay with these images being
@@ -10,6 +11,7 @@ packable = true
 codegen = true
 codegen-path = "pack-these/init.lua"
 codegen-base-path = "pack-these"
+codegen-typescript-declaration = true
 
 [[inputs]]
 glob = "dont-pack-these/**/*.png"
@@ -18,3 +20,4 @@ glob = "dont-pack-these/**/*.png"
 packable = false
 
 codegen = true
+codegen-typescript-declaration = true
