@@ -5,18 +5,17 @@ use std::{
     path::Path,
 };
 
-use fs_err::{os::windows, File};
+use fs_err::File;
 
 use crate::{
     codegen::GroupedItem,
-    data::{AssetId, SyncInput},
-    lua::lua_ast::Function,
+    data::SyncInput,
     typescript::ts_ast::{Expression, VariableDeclaration, VariableKind},
 };
 
 use super::ts_ast::{
     FunctionType, InterfaceDeclaration, ModifierToken, Parameter, PropertySignature, Statement,
-    TemplateHead, TemplateLiteralExpression, TypeReference,
+    TypeReference,
 };
 
 const CODEGEN_HEADER: &str =
@@ -215,7 +214,8 @@ fn codegen_grouped(output_path: &Path, inputs: &[&SyncInput]) -> io::Result<()> 
         .collect();
 
     let assets_interface = InterfaceDeclaration::new(sanitized_name.to_string(), None, properties);
-    let export_assignment = Statement::export_assignment(Expression::Identifier(sanitized_name.to_string()));
+    let export_assignment =
+        Statement::export_assignment(Expression::Identifier(sanitized_name.to_string()));
 
     write!(
         file,
