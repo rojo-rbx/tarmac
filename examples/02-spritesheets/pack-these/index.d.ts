@@ -7,13 +7,13 @@ interface ImageSlice {
 interface Folder_TestDpi {
 	L: (dpiScale: 1 | 2) => ImageSlice;
 }
-interface Assets {
+interface PackedSprites {
 	H: ImageSlice;
 	I: ImageSlice;
 	J: ImageSlice;
 	K: ImageSlice;
 	L: ImageSlice;
-	TestDpi: Folder_TestDpi;
+	["Test Dpi"]: Folder_TestDpi;
 	a: ImageSlice;
 	b: ImageSlice;
 	c: ImageSlice;
@@ -22,4 +22,6 @@ interface Assets {
 	f: ImageSlice;
 	g: ImageSlice;
 }
-export = Assets;
+/** Tarmac Generated Asset Types */
+declare const PackedSprites: PackedSprites;
+export = PackedSprites;

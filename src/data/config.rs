@@ -136,6 +136,9 @@ fn default_spritesheet_padding_size() -> u32 {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct InputConfig {
+    #[serde(default)]
+    pub name: Option<String>,
+
     /// A glob that will match all files that should be considered for this
     /// group of inputs.
     pub glob: Glob,

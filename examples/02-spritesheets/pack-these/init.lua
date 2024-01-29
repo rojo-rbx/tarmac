@@ -25,7 +25,7 @@ return {
 		ImageRectOffset = Vector2.new(513, 506),
 		ImageRectSize = Vector2.new(505, 505),
 	},
-	TestDpi = {
+	["Test Dpi"] = {
 		L = function(dpiScale)
 			if dpiScale >= 2 then
 				return {

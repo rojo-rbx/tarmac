@@ -1,21 +1,22 @@
 use std::{
     collections::BTreeMap,
+    fs,
     io::{self, Write},
     path::Path,
 };
 
-use fs_err::File;
+use fs_err::{os::windows, File};
 
 use crate::{
     codegen::GroupedItem,
     data::{AssetId, SyncInput},
     lua::lua_ast::Function,
-    typescript::ts_ast::Expression,
+    typescript::ts_ast::{Expression, VariableDeclaration, VariableKind},
 };
 
 use super::ts_ast::{
     FunctionType, InterfaceDeclaration, ModifierToken, Parameter, PropertySignature, Statement,
-    TypeReference,
+    TemplateHead, TemplateLiteralExpression, TypeReference,
 };
 
 const CODEGEN_HEADER: &str =
@@ -94,7 +95,7 @@ fn get_properties(item: &GroupedItem) -> (Vec<PropertySignature>, Vec<Statement>
                         prereqs.push(Statement::InterfaceDeclaration(assets_interface));
 
                         fields.push(PropertySignature::new(
-                            sanitized_name.clone(),
+                            name.clone(),
                             None,
                             Expression::Identifier(interface_name),
                         ));
@@ -165,13 +166,32 @@ fn get_sprite_interface() -> Statement {
 /// We'll build up a Lua file containing nested tables that match the structure
 /// of the input's path with its base path stripped away.
 fn codegen_grouped(output_path: &Path, inputs: &[&SyncInput]) -> io::Result<()> {
+    let declaration_path = output_path.parent().unwrap().join("index.d.ts");
+
+    let should_generate_d_ts = inputs
+        .iter()
+        .find(|f| f.config.codegen_typescript_declaration);
+
+    if should_generate_d_ts.is_none() {
+        // Remove file if exists
+        if declaration_path.exists() {
+            fs::remove_file(declaration_path)?;
+        }
+
+        return Ok(());
+    }
+
+    let first = should_generate_d_ts.unwrap();
+    let name = &first.config.name;
+    println!("Name is {}", name.clone().unwrap());
+
     let root_folder = GroupedItem::parse_root_folder(output_path, inputs);
 
     let root = &GroupedItem::Folder {
         children_by_name: root_folder,
     };
 
-    let mut file = File::create(output_path.parent().unwrap().join("index.d.ts"))?;
+    let mut file = File::create(declaration_path)?;
     writeln!(file, "{}", CODEGEN_HEADER)?;
 
     let (properties, prereqs) = get_properties(&root);
@@ -182,14 +202,39 @@ fn codegen_grouped(output_path: &Path, inputs: &[&SyncInput]) -> io::Result<()> 
         write!(file, "{}", prereq)?;
     }
 
-    let assets_interface = InterfaceDeclaration::new("Assets".into(), None, properties);
-    let export_assignment = Statement::export_assignment(Expression::Identifier("Assets".into()));
+    let interface_name = should_generate_d_ts
+        .unwrap()
+        .config
+        .name
+        .clone()
+        .unwrap_or("TarmacAssets".into());
+
+    let sanitized_name: String = interface_name
+        .chars()
+        .filter(|c| c.is_alphanumeric())
+        .collect();
+
+    let assets_interface = InterfaceDeclaration::new(sanitized_name.to_string(), None, properties);
+    let export_assignment = Statement::export_assignment(Expression::Identifier(sanitized_name.to_string()));
 
     write!(
         file,
         "{}",
         Statement::InterfaceDeclaration(assets_interface)
     )?;
+
+    write!(
+        file,
+        "/** Tarmac Generated Asset Types */\n{}",
+        VariableDeclaration::new(
+            sanitized_name.to_string(),
+            VariableKind::Const,
+            Some(Expression::Identifier(sanitized_name.to_string())),
+            Some(vec![ModifierToken::Declare]),
+            None,
+        )
+    )?;
+
     write!(file, "{}", export_assignment)?;
 
     Ok(())
@@ -199,11 +244,9 @@ fn codegen_grouped(output_path: &Path, inputs: &[&SyncInput]) -> io::Result<()> 
 /// defined, and so generate individual files.
 fn codegen_individual(inputs: &[&SyncInput]) -> io::Result<()> {
     for input in inputs {
-        // let expression = match (&input.id, input.slice) {
-        //     (Some(id), Some(slice)) => codegen_url_and_slice(id, slice),
-        //     (Some(id), None) => codegen_just_asset_url(id),
-        //     _ => continue,
-        // };
+        if !input.config.codegen_typescript_declaration {
+            continue;
+        }
 
         // let ast = Statement::Return(expression);
 
@@ -211,7 +254,12 @@ fn codegen_individual(inputs: &[&SyncInput]) -> io::Result<()> {
 
         let mut file = File::create(path)?;
         writeln!(file, "{}", CODEGEN_HEADER)?;
-        //write!(file, "{}", ast)?;
+
+        write!(
+            file,
+            "{}",
+            Statement::export_assignment(Expression::Identifier(input.human_name().into()))
+        )?;
     }
 
     Ok(())

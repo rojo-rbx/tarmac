@@ -1,5 +1,7 @@
 use std::fmt::{self, Write};
 
+use fs_err::write;
+
 trait FmtTS {
     fn fmt_ts(&self, output: &mut TSStream) -> fmt::Result;
 }
@@ -65,7 +67,11 @@ pub(crate) struct PropertySignature {
     expression: Expression,
 }
 impl PropertySignature {
-    pub fn new(name: String, modifiers: Option<Vec<ModifierToken>>, expression: Expression) -> PropertySignature {
+    pub fn new(
+        name: String,
+        modifiers: Option<Vec<ModifierToken>>,
+        expression: Expression,
+    ) -> PropertySignature {
         PropertySignature {
             name,
             modifiers,
@@ -81,7 +87,9 @@ impl FmtTS for PropertySignature {
             }
         }
 
-        if self.name.chars().all(char::is_alphanumeric) && self.name.chars().nth(0).unwrap().is_alphabetic() {
+        if self.name.chars().all(char::is_alphanumeric)
+            && self.name.chars().nth(0).unwrap().is_alphabetic()
+        {
             writeln!(output, "{}: {};", self.name, self.expression)
         } else {
             writeln!(output, "[\"{}\"]: {};", self.name, self.expression)
@@ -98,21 +106,21 @@ impl FmtTS for TypeReference {
         match self {
             TypeReference::Expression(inner) => {
                 write!(output, "{}", inner)?;
-            },
+            }
             TypeReference::Union(types) => {
                 let count = types.len();
                 let mut iter = 0;
 
                 for parameter in types {
                     iter += 1;
-                    
+
                     parameter.fmt_ts(output)?;
-        
+
                     if iter < count {
                         write!(output, " | ")?;
                     }
                 }
-            },
+            }
         }
 
         Ok(())
@@ -139,10 +147,7 @@ pub(crate) struct Parameter {
 
 impl Parameter {
     pub fn new(name: String, param_type: TypeReference) -> Parameter {
-        Parameter {
-            name,
-            param_type,
-        }
+        Parameter { name, param_type }
     }
 }
 
@@ -181,6 +186,25 @@ pub(crate) struct VariableDeclaration {
     modifiers: Option<Vec<ModifierToken>>,
     expression: Option<Expression>,
 }
+
+impl VariableDeclaration {
+    pub fn new(
+        name: String,
+        kind: VariableKind,
+        type_expression: Option<Expression>,
+        modifiers: Option<Vec<ModifierToken>>,
+        expression: Option<Expression>,
+    ) -> Statement {
+        Statement::VariableDeclaration(Self {
+            name,
+            kind,
+            type_expression,
+            modifiers,
+            expression,
+        })
+    }
+}
+
 impl FmtTS for VariableDeclaration {
     fn fmt_ts(&self, output: &mut TSStream) -> fmt::Result {
         if let Some(mod_tokens) = &self.modifiers {
@@ -250,9 +274,55 @@ impl FmtTS for InterfaceDeclaration {
     }
 }
 
+pub struct TemplateHead {
+    text: String,
+}
+
+#[derive(PartialEq)]
+pub enum TemplateSpanKind {
+    Middle,
+    Tail,
+}
+
+pub struct TemplateSpan {
+    expression: Expression,
+    literal: String,
+    span_kind: TemplateSpanKind,
+}
+
+pub struct TemplateLiteralExpression {
+    head: TemplateHead,
+    template_spans: Vec<TemplateSpan>,
+}
+impl TemplateLiteralExpression {
+    pub fn new(head: String, template_spans: Vec<TemplateSpan>) -> Expression {
+        Expression::TemplateLiteral(Self {
+            head: TemplateHead { text: head },
+            template_spans,
+        })
+    }
+
+    pub fn middle(expression: Expression, literal: String) -> TemplateSpan {
+        TemplateSpan {
+            expression,
+            literal: literal,
+            span_kind: TemplateSpanKind::Middle,
+        }
+    }
+
+    pub fn tail(expression: Expression, literal: String) -> TemplateSpan {
+        TemplateSpan {
+            expression,
+            literal: literal,
+            span_kind: TemplateSpanKind::Tail,
+        }
+    }
+}
+
 pub(crate) enum Expression {
     Identifier(String),
     StringLiteral(String),
+    TemplateLiteral(TemplateLiteralExpression),
     NumericLiteral(i32),
     TypeLiteral(Vec<PropertySignature>),
     FunctionType(FunctionType),
@@ -281,14 +351,42 @@ impl FmtTS for Expression {
 
                 Ok(())
             }
+            Self::TemplateLiteral(literal) => {
+                let head = &literal.head;
+                let spans = &literal.template_spans;
+
+                write!(output, "`{}", head.text)?;
+
+                for span in spans {
+                    write!(output, "${{")?;
+
+                    if span.span_kind == TemplateSpanKind::Middle {
+                        span.expression.fmt_ts(output)?;
+                        write!(output, "}}{}", span.literal)?;
+                    } else {
+                        span.expression.fmt_ts(output)?;
+                        write!(output, "}}")?;
+                        write!(output, "{}`", span.literal)?;
+                        break;
+                    }
+                }
+
+                Ok(())
+            }
             Self::FunctionType(func) => func.fmt_ts(output),
         }
     }
 }
 proxy_display!(Expression);
 
+pub struct TypeAliasDeclaration {
+    name: String,
+    type_expression: Expression,
+}
+
 pub(crate) enum Statement {
     InterfaceDeclaration(InterfaceDeclaration),
+    TypeAliasDeclaration(TypeAliasDeclaration),
     VariableDeclaration(VariableDeclaration),
     ExportAssignment(ExportAssignment),
 }
@@ -306,6 +404,13 @@ impl FmtTS for Statement {
             Self::VariableDeclaration(declaration) => declaration.fmt_ts(output),
             Self::ExportAssignment(export) => {
                 writeln!(output, "export = {};", export.expression)
+            }
+            Self::TypeAliasDeclaration(type_alias) => {
+                writeln!(
+                    output,
+                    "type {} = {};",
+                    type_alias.name, type_alias.type_expression
+                )
             }
         }
     }
