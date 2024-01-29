@@ -1,4 +1,4 @@
-use std::fmt::{self, Write};
+use std::fmt::{self, Display, Write};
 
 use fs_err::write;
 
@@ -384,16 +384,37 @@ pub struct TypeAliasDeclaration {
     type_expression: Expression,
 }
 
+pub enum Comment {
+    Single(String),
+    Multiline(String),
+}
+
+impl Comment {
+    pub fn multiline(text: String) -> Statement {
+        Statement::Comment(Self::Multiline(text))
+    }
+
+    pub fn singleline(text: String) -> Statement {
+        Statement::Comment(Self::Single(text))
+    }
+}
+
 pub(crate) enum Statement {
     InterfaceDeclaration(InterfaceDeclaration),
     TypeAliasDeclaration(TypeAliasDeclaration),
     VariableDeclaration(VariableDeclaration),
     ExportAssignment(ExportAssignment),
+    Comment(Comment),
+    List(Vec<Statement>),
 }
 
 impl Statement {
     pub fn export_assignment(expression: Expression) -> Statement {
         Statement::ExportAssignment(ExportAssignment { expression })
+    }
+
+    pub fn list(statements: Vec<Statement>) -> Self {
+        Self::List(statements)
     }
 }
 
@@ -411,6 +432,21 @@ impl FmtTS for Statement {
                     "type {} = {};",
                     type_alias.name, type_alias.type_expression
                 )
+            }
+            Self::Comment(comment) => match comment {
+                Comment::Single(text) => {
+                    writeln!(output, "// {}", text)
+                }
+                Comment::Multiline(text) => {
+                    writeln!(output, "/*{}*/", text)
+                }
+            },
+            Self::List(statements) => {
+                for statement in statements {
+                    statement.fmt_ts(output)?;
+                }
+
+                Ok(())
             }
         }
     }

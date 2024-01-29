@@ -11,9 +11,10 @@ use std::{
 use fs_err::File;
 
 use crate::{
+    codegen::GroupedItem,
     data::ImageSlice,
     data::{AssetId, SyncInput},
-    lua::lua_ast::{Block, Expression, Function, IfBlock, Statement, Table}, codegen::GroupedItem,
+    lua::lua_ast::{Block, Expression, Function, IfBlock, Statement, Table},
 };
 
 const CODEGEN_HEADER: &str =

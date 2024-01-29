@@ -1,6 +1,10 @@
-use std::{path::{Path, self}, io, collections::BTreeMap};
+use std::{
+    collections::BTreeMap,
+    io,
+    path::{self, Path},
+};
 
-use crate::{data::SyncInput, typescript, lua};
+use crate::{data::SyncInput, lua, typescript};
 
 pub fn perform_codegen(output_path: Option<&Path>, inputs: &[&SyncInput]) -> io::Result<()> {
     lua::codegen::perform_codegen(output_path, inputs)?;
@@ -22,7 +26,10 @@ pub enum GroupedItem<'a> {
 }
 
 impl GroupedItem<'_> {
-    pub fn parse_root_folder<'a>(output_path: &Path, inputs: &'a [&SyncInput]) -> BTreeMap<String, GroupedItem<'a>> {
+    pub fn parse_root_folder<'a>(
+        output_path: &Path,
+        inputs: &'a [&SyncInput],
+    ) -> BTreeMap<String, GroupedItem<'a>> {
         let mut root_folder: BTreeMap<String, GroupedItem<'a>> = BTreeMap::new();
 
         for &input in inputs {
@@ -31,18 +38,18 @@ impl GroupedItem<'_> {
             if !input.config.codegen {
                 continue;
             }
-    
+
             // The extension portion of the path is not useful for code generation.
             // By stripping it off, we generate the names that users expect.
             let mut path_without_extension = input.path_without_dpi_scale.clone();
             path_without_extension.set_extension("");
-    
+
             // If we can't construct a relative path, there isn't a sensible name
             // that we can use to refer to this input.
             let relative_path = path_without_extension
                 .strip_prefix(&input.config.codegen_base_path)
                 .expect("Input base path was not a base path for input");
-    
+
             // Collapse `..` path segments so that we can map this path onto our
             // tree of inputs.
             let mut segments = Vec::new();
@@ -57,14 +64,14 @@ impl GroupedItem<'_> {
                     path::Component::ParentDir => assert!(segments.pop().is_some()),
                 }
             }
-    
+
             // Navigate down the tree, creating any folder entries that don't exist
             // yet.
             let mut current_dir = &mut root_folder;
             for (i, &segment) in segments.iter().enumerate() {
                 if i == segments.len() - 1 {
                     // We assume that the last segment of a path must be a file.
-    
+
                     let input_group = match current_dir.get_mut(segment) {
                         Some(existing) => existing,
                         None => {
@@ -75,7 +82,7 @@ impl GroupedItem<'_> {
                             current_dir.get_mut(segment).unwrap()
                         }
                     };
-    
+
                     if let GroupedItem::InputGroup {
                         inputs_by_dpi_scale,
                     } = input_group
@@ -85,13 +92,12 @@ impl GroupedItem<'_> {
                         unreachable!();
                     }
                 } else {
-                    let next_entry =
-                        current_dir
-                            .entry(segment.to_owned())
-                            .or_insert_with(|| GroupedItem::Folder {
-                                children_by_name: BTreeMap::new(),
-                            });
-    
+                    let next_entry = current_dir.entry(segment.to_owned()).or_insert_with(|| {
+                        GroupedItem::Folder {
+                            children_by_name: BTreeMap::new(),
+                        }
+                    });
+
                     if let GroupedItem::Folder { children_by_name } = next_entry {
                         current_dir = children_by_name;
                     } else {
