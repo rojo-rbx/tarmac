@@ -20,3 +20,4 @@ glob = "dont-pack-these/**/*.png"
 packable = false
 
 codegen = true
+codegen-typescript-declaration = true

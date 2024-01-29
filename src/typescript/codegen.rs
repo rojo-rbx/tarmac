@@ -182,7 +182,6 @@ fn codegen_grouped(output_path: &Path, inputs: &[&SyncInput]) -> io::Result<()> 
 
     let first = should_generate_d_ts.unwrap();
     let name = &first.config.name;
-    println!("Name is {}", name.clone().unwrap());
 
     let root_folder = GroupedItem::parse_root_folder(output_path, inputs);
 
@@ -254,6 +253,18 @@ fn codegen_individual(inputs: &[&SyncInput]) -> io::Result<()> {
 
         let mut file = File::create(path)?;
         writeln!(file, "{}", CODEGEN_HEADER)?;
+
+        write!(
+            file,
+            "/** Tarmac Generated Asset Types */\n{}",
+            VariableDeclaration::new(
+                input.human_name(),
+                VariableKind::Const,
+                Some(Expression::Identifier("string".into())),
+                Some(vec![ModifierToken::Declare]),
+                None,
+            )
+        )?;
 
         write!(
             file,
